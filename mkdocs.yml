@@ -83,6 +83,7 @@ nav:
   - 共享知识:
       - 概览: shared/index.md
       - 语音转文字配置: shared/speech-to-text.md
+      - SiliconFlow 图片生成: shared/siliconflow-image-gen.md
 
 extra:
   social:
