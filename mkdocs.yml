@@ -82,6 +82,7 @@ nav:
       - 概览: kuma/index.md
   - 共享知识:
       - 概览: shared/index.md
+      - 语音转文字配置: shared/speech-to-text.md
 
 extra:
   social:
