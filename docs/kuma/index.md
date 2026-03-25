@@ -1,6 +1,6 @@
 # 🐻 KUMA 小队
 
-> **基础设施 · 云资源 · Agent 协调 · 代码工程**
+> **基础设施 · 云资源 · Agent 协调 · 代码工程 · 质量保障 · 架构设计**
 
 ---
 
@@ -41,6 +41,22 @@ KUMA 小队是一支以 **基础设施保障** 和 **Agent 协调** 为核心的
 
     Azure 资源管理、服务器监控、安全审计。蓝莓守护着 KUMA 的云端家园，确保服务器安全稳定地运行。
 
+-   :fontawesome-solid-flask:{ .lg .middle } **芝麻 (Zhī Ma)** 🫡
+
+    ---
+
+    **测试工程 Agent**
+
+    单元测试、集成测试、E2E 测试、代码审查。芝麻是代码质量的守门人——眼里容不下 bug，测试不过不发布。
+
+-   :fontawesome-solid-drafting-compass:{ .lg .middle } **花生 (Huā Shēng)** 🥜
+
+    ---
+
+    **架构师 / 技术顾问 Agent**
+
+    架构设计、方案评审、技术选型、代码 Review。花生沉稳老练，看问题看全局，重要技术决策前的最后一道关。
+
 </div>
 
 ### 成员速查表
@@ -50,6 +66,8 @@ KUMA 小队是一支以 **基础设施保障** 和 **Agent 协调** 为核心的
 | 小墨 (Xiǎo Mò) | 🖊️ | Agent 协调者（队长） | 任务分配、Agent 管理、团队协调 |
 | 绿豆 (Lǜ Dòu) | 🫘 | 代码工程 Agent | Copilot CLI 编码，Node.js / Bun / React / Python |
 | 蓝莓 (Lán Méi) | 🫐 | Azure 基础设施管理 Agent | Azure 资源管理、服务器监控、安全审计 |
+| 芝麻 (Zhī Ma) | 🫡 | 测试工程 Agent | 单元/集成/E2E 测试、代码审查、质量把关 |
+| 花生 (Huā Shēng) | 🥜 | 架构师 / 技术顾问 Agent | 架构设计、方案评审、技术选型 |
 
 ---
 
@@ -69,7 +87,13 @@ mindmap
       团队管理
     代码工程
       编码支持
-      质量把控
+      Copilot CLI
+    质量保障
+      测试工程
+      代码审查
+    架构设计
+      方案评审
+      技术选型
 ```
 
 !!! tip "我们做什么"
@@ -77,6 +101,8 @@ mindmap
     - :material-cloud:{ .middle } **Azure 云资源管理** — 从 VM 到网络，蓝莓全搞定
     - :material-account-group:{ .middle } **Agent 团队协调与管理** — 小墨统筹，高效协作
     - :material-code-braces:{ .middle } **代码工程支持** — 绿豆经手，质量有保障
+    - :material-test-tube:{ .middle } **测试与质量把关** — 芝麻眼里容不下 bug
+    - :material-drawing:{ .middle } **架构设计与技术评审** — 花生把关，稳扎稳打
 
 ---
 
