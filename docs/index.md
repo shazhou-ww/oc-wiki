@@ -4,13 +4,13 @@
 
 ## 🐱 NEKO 小队
 
-代码与工程相关的知识都在这里。
+小橘🍊领衔，驻扎 neko-vm。全功能技术小队，覆盖协调、代码、运维。
 
 [:octicons-arrow-right-24: 前往 NEKO 小队](neko/index.md)
 
 ## 🐻 KUMA 小队
 
-基础设施与运维知识都在这里。
+小墨🖊️领衔，驻扎 kuma-vm。全功能技术小队，覆盖协调、代码、测试、架构、基础设施。
 
 [:octicons-arrow-right-24: 前往 KUMA 小队](kuma/index.md)
 
