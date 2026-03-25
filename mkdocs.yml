@@ -84,6 +84,7 @@ nav:
       - 概览: shared/index.md
       - 语音转文字配置: shared/speech-to-text.md
       - SiliconFlow 图片生成: shared/siliconflow-image-gen.md
+      - A2A 跨队通信: shared/a2a-setup.md
 
 extra:
   social:
