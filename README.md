@@ -50,6 +50,16 @@ mkdocs serve
 
 推送到 `main` 分支后，GitHub Actions 会自动构建并部署到 GitHub Pages。
 
+### ⚠️ 首次设置
+
+GitHub Actions workflow 文件需要手动添加（需要 `workflow` 权限的 token）：
+
+1. 在 GitHub 网页上进入仓库
+2. 点击 "Add file" → "Create new file"
+3. 文件路径输入 `.github/workflows/deploy.yml`
+4. 粘贴 [deploy.yml 内容](.github/workflows/deploy.yml)（本地 repo 中已有）
+5. 提交即可触发自动部署
+
 ## 📝 License
 
 MIT
