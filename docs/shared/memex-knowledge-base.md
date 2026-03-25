@@ -288,6 +288,29 @@ memex archive <slug>
 !!! info "source 字段约定"
     统一使用 `openclaw-<agent名>` 格式标识来源，如 `openclaw-huasheng`、`openclaw-xiaomo`、`openclaw-lvdou`。便于追溯谁写了什么。
 
+## OpenClaw Skill：memex-zettelkasten
+
+我们为 memex 编写了专用的 OpenClaw Skill，安装在 `skills/memex-zettelkasten/`，所有 agent 自动加载。
+
+Skill 的核心作用是让 agent **自动执行 recall → capture 循环**，无需人工提醒：
+
+### 自动化行为
+
+| 时机 | 行为 | 命令 |
+|:-----|:-----|:-----|
+| **任务开始** | 自动 recall — 搜索相关卡片，避免重复踩坑 | `memex search "<关键词>"` |
+| **任务结束** | 自动 capture — 记录非显而易见的知识 | `memex write <slug>` |
+| **空闲时** | 图谱健康检查 — 发现孤立卡片，补充链接 | `memex links` |
+
+### Skill 还规定了
+
+- **卡片格式规范**：frontmatter 必填字段（title / created / source）、slug 命名规则（kebab-case, 3-60 字符）
+- **特殊前缀**：`adr-*`（架构决策）、`gotcha-*`（踩坑）、`pattern-*`（最佳实践）、`tool-*`（工具技巧）
+- **知识归属决策树**：什么放 memex（可复用技术知识） vs MEMORY.md（个人偏好） vs OC Wiki（人类文档） vs memory/*.md（日志）
+- **Git 同步配置**：`memex sync --init` / `memex sync on` 实现跨 VM 卡片同步
+
+完整内容见仓库：`skills/memex-zettelkasten/SKILL.md`
+
 ---
 
 <center>
