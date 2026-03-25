@@ -85,6 +85,8 @@ nav:
       - 语音转文字配置: shared/speech-to-text.md
       - SiliconFlow 图片生成: shared/siliconflow-image-gen.md
       - A2A 跨队通信: shared/a2a-setup.md
+      - Memex 知识管理: shared/memex-knowledge-base.md
+      - OpenClaw Skills: shared/openclaw-skills.md
 
 extra:
   social:
