@@ -86,6 +86,7 @@ nav:
       - SiliconFlow 图片生成: shared/siliconflow-image-gen.md
       - A2A 跨队通信: shared/a2a-setup.md
       - Memex 知识管理: shared/memex-knowledge-base.md
+      - TTS 语音功能: shared/tts-guide.md
 
 extra:
   social:
