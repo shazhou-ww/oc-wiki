@@ -85,9 +85,11 @@ nav:
       - 概览: kuma/index.md
   - 共享知识:
       - 概览: shared/index.md
+      - Gateway 本地搭建: shared/gateway-setup.md
+      - Gateway 配置红线: shared/gateway-safety.md
+      - A2A 跨队通信: shared/a2a-setup.md
       - 语音转文字配置: shared/speech-to-text.md
       - SiliconFlow 图片生成: shared/siliconflow-image-gen.md
-      - A2A 跨队通信: shared/a2a-setup.md
       - Memex 知识管理: shared/memex-knowledge-base.md
       - TTS 语音功能: shared/tts-guide.md
 
