@@ -78,6 +78,7 @@ nav:
   - 首页: index.md
   - AI 日报:
       - 概览: ai-daily/index.md
+      - 2026-03-27: ai-daily/2026-03-27.md
       - 2026-03-26: ai-daily/2026-03-26.md
   - NEKO 小队:
       - 概览: neko/index.md
