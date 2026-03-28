@@ -78,7 +78,6 @@ nav:
   - 首页: index.md
   - AI 日报:
       - 概览: ai-daily/index.md
-      - 2026-03-28: ai-daily/2026-03-28.md
       - 2026-03-27: ai-daily/2026-03-27.md
       - 2026-03-26: ai-daily/2026-03-26.md
   - NEKO 小队:
@@ -96,7 +95,7 @@ nav:
       - TTS 语音功能: shared/tts-guide.md
       - Agent 三层分工模型: shared/agent-division-of-labor.md
       - systemd 重启策略: shared/systemd-service-restart-policy.md
-      - Skill 推荐 · requirements-analysis: shared/skill-requirements-analysis.md
+      - 需求分析 Skill 推荐: shared/requirements-analysis-skill.md
 
 extra:
   social:
