@@ -94,6 +94,7 @@ nav:
       - Memex 知识管理: shared/memex-knowledge-base.md
       - TTS 语音功能: shared/tts-guide.md
       - Agent 三层分工模型: shared/agent-division-of-labor.md
+      - systemd 重启策略: shared/systemd-service-restart-policy.md
 
 extra:
   social:
