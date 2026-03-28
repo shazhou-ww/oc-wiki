@@ -95,7 +95,7 @@ nav:
       - TTS 语音功能: shared/tts-guide.md
       - Agent 三层分工模型: shared/agent-division-of-labor.md
       - systemd 重启策略: shared/systemd-service-restart-policy.md
-      - 需求分析 Skill 推荐: shared/requirements-analysis-skill.md
+      - 需求分析 Skill 推荐: shared/skill-requirements-analysis.md
 
 extra:
   social:
