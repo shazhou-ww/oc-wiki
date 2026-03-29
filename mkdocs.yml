@@ -96,6 +96,7 @@ nav:
       - Agent 三层分工模型: shared/agent-division-of-labor.md
       - systemd 重启策略: shared/systemd-service-restart-policy.md
       - 需求分析 Skill 推荐: shared/skill-requirements-analysis.md
+      - M2 三层管理模式: shared/m2-manager-pattern.md
 
 extra:
   social:
