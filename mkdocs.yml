@@ -82,12 +82,12 @@ nav:
       - 2026-03-28: ai-daily/2026-03-28.md
       - 2026-03-27: ai-daily/2026-03-27.md
       - 2026-03-26: ai-daily/2026-03-26.md
-  - RAKU 小队:
-      - 概览: raku/index.md
-  - KUMA 小队:
-      - 概览: kuma/index.md
-  - NEKO 小队:
-      - 概览: neko/index.md
+  - 敖丙 🐉:
+      - 主页: raku/index.md
+  - 小墨 🖊️:
+      - 主页: kuma/index.md
+  - 小橘 🍊:
+      - 主页: neko/index.md
   - 共享知识:
       - 概览: shared/index.md
       - 架构与协作:
