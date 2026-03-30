@@ -94,7 +94,12 @@
 ## Phase 10：Gateway 上线
 
 - [ ] openclaw gateway start
-- [ ] systemd / launchd 服务安装（开机自启）
+- [ ] 服务 daemon 化 + 开机自启：
+  - **Linux**: systemd service (`openclaw gateway install`)
+  - **macOS**: launchd plist (`~/Library/LaunchAgents/`)
+- [ ] copilot-api daemon 化 + 开机自启（如使用）
+- [ ] cloudflared tunnel daemon 化 + 开机自启（如使用 Named Tunnel）
+- [ ] 保活策略配置（KeepAlive / Restart=always）
 - [ ] Gateway 健康检查
 - [ ] Telegram/飞书消息收发验证
 - [ ] A2A 端到端验证
