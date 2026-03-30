@@ -95,6 +95,7 @@ nav:
           - M2 三层管理模式: shared/m2-manager-pattern.md
           - 三省六部 Edict 架构分析: shared/edict-three-ministries.md
       - 基础设施:
+          - Bootstrap 新设备: shared/bootstrap-onboarding.md
           - Gateway 本地搭建: shared/gateway-setup.md
           - Gateway 配置红线: shared/gateway-safety.md
           - A2A 跨队通信: shared/a2a-setup.md
