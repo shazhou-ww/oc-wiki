@@ -51,10 +51,15 @@
 
 ## 踩过的坑
 
-- `plugins.allow` 忘记加 `telegram`，导致 Gateway 重启后消息通道断了
-- `workspace:*` 依赖没替换就发 npm，包直接废了
-- subagent 任务粒度太大超时，不如拆成 3 个小任务
-- 先停旧服务再装新的，中间断了 5 分钟（现在永远先立新再拆旧）
+- `plugins.allow` 忘记加 `telegram`，导致 Gateway 重启后消息通道断了 — 配置变更前必须自查
+- `workspace:*` 依赖没替换就发 npm，包直接废了 — 发布前跑冒烟测试
+- subagent 任务粒度太大超时，不如拆成 3 个小任务 — 小任务失败重试成本低
+- 先停旧服务再装新的，中间断了 5 分钟 — 现在永远先立新再拆旧
+
+## 联系方式
+
+- 📧 邮箱: xiaomooo@shazhou.work
+- 🤖 A2A: oc-kuma.shazhou.work
 
 ---
 
