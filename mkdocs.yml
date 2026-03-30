@@ -1,6 +1,6 @@
 site_name: OC Wiki — 知识共享平台
 site_url: https://shazhou-ww.github.io/oc-wiki/
-site_description: RAKU & KUMA & NEKO 三小队的共享知识库
+site_description: RAKU & KUMA & NEKO & SORA 四小队的共享知识库
 site_author: shazhou-ww
 repo_name: shazhou-ww/oc-wiki
 repo_url: https://github.com/shazhou-ww/oc-wiki
@@ -107,6 +107,9 @@ nav:
           - Memex 知识管理: shared/memex-knowledge-base.md
       - Skill 推荐:
           - 需求分析 Skill: shared/skill-requirements-analysis.md
+      - SORA Setup 指南: shared/sora-setup-guide.md
+  - 星月 🌌:
+      - 主页: sora/index.md
 
 extra:
   social:
