@@ -124,6 +124,9 @@ cloudflared tunnel --url tcp://localhost:22 --protocol http2
 
 命令执行后，cloudflared 会输出一个类似 `https://xxx-yyy-zzz.trycloudflare.com` 的临时域名。
 
+!!! info "`--protocol http2` 参数"
+    较新版本的 cloudflared 已默认使用 http2 协议，此参数可省略。如果你的 VPN/代理环境下遇到连接问题，可以显式加上确保不走 QUIC。
+
 !!! info "Quick Tunnel 的优势"
     - **零依赖**：不需要 Cloudflare 账号、不需要域名、不需要 Named Tunnel 配置
     - **零持久化**：隧道随进程启动/销毁，不留痕迹
@@ -163,7 +166,7 @@ ssh -o ProxyCommand="cloudflared access tcp --hostname %h --url localhost:2222" 
 |------|------|------|
 | 1 | 检测 OS 类型 | macOS/Ubuntu/Debian，选择对应包管理器 |
 | 2 | 安装 cloudflared | brew / apt / 直接下载二进制 |
-| 3 | 确认 SSH 服务运行 | macOS 需要手动开启"远程登录"，Linux 通常已启动 |
+| 3 | 确认 SSH 服务运行 | macOS 需要手动开启"远程登录"（系统设置 → 通用 → 共享 → 远程登录），Linux 通常已启动 |
 | 4 | 启动 Quick Tunnel | `cloudflared tunnel --url tcp://localhost:22 --protocol http2` |
 | 5 | 提取并显示隧道地址 | 解析 cloudflared stderr 输出 |
 | 6 | 等待 agent 接管 | 保持前台运行，Ctrl+C 可中断 |
@@ -239,6 +242,16 @@ Bootstrap 场景优先用 Quick Tunnel。
 
 **注意**：这个 `cert.pem` 是 Cloudflare 专有的 Origin Certificate 格式，**不是**标准 X.509 证书。不能用 `openssl x509 -in cert.pem -text` 提取域名，命令会报错或输出乱码。这个文件只供 cloudflared 自身使用。
 
+### 7. macOS 默认可能禁用密码 SSH
+
+**问题**：部分 macOS 版本默认只允许公钥认证，不允许密码登录。Bootstrap 脚本依赖密码 SSH 进行首次连接。
+
+**解决方案**：
+
+1. 确认 `/etc/ssh/sshd_config` 中 `PasswordAuthentication` 设置（macOS 可能在 `/etc/ssh/sshd_config.d/` 下有覆盖文件，以最后生效的为准）
+2. 或者：人类在 bootstrap 前先把 buddy agent 的公钥手动加入 `~/.ssh/authorized_keys`
+3. 最可靠：脚本运行时提示人类输入 buddy agent 的公钥，自动写入 authorized_keys，完全绕过密码认证
+
 ---
 
 ## 安全考虑
@@ -260,6 +273,61 @@ Bootstrap 场景优先用 Quick Tunnel。
 - Bootstrap 完成后，立即 `Ctrl+C` 终止 cloudflared 进程
 - 改用正式的、持久化的访问方式（Tailscale、固定公网 IP + 防火墙等）
 - 不要让 Quick Tunnel 长期运行，它是临时引导工具，不是生产访问方式
+
+---
+
+## 从 Quick Tunnel 毕业到 Named Tunnel
+
+Bootstrap 阶段用 Quick Tunnel 引导新设备，但**长期运行应切换到 Named Tunnel**。Quick Tunnel 的域名随进程随机生成，进程一旦退出隧道即失效，不适合作为持久访问入口。
+
+### Named Tunnel 的优势
+
+| 特性 | Quick Tunnel | Named Tunnel |
+|------|-------------|-------------|
+| 域名固定 | ❌ 每次随机 | ✅ 绑定你的域名 |
+| 可配置自启 | ❌ 手动运行 | ✅ cloudflared 作为系统服务 |
+| 不依赖进程存活 | ❌ 进程死则隧道断 | ✅ 服务化后自动重启 |
+| 需要 CF 账号 + 域名 | ❌ 不需要 | ✅ 需要 |
+
+### 切换步骤概要
+
+```bash
+# 1. 登录 Cloudflare（生成 ~/.cloudflared/cert.pem）
+cloudflared login
+
+# 2. 创建 Named Tunnel
+cloudflared tunnel create <tunnel-name>
+
+# 3. 编写配置文件
+cat > ~/.cloudflared/config.yml << 'EOF'
+tunnel: <tunnel-id>
+credentials-file: /home/<user>/.cloudflared/<tunnel-id>.json
+
+ingress:
+  - hostname: ssh.yourdomain.com
+    service: tcp://localhost:22
+  - service: http_status:404
+EOF
+
+# 4. 在 Cloudflare DNS 添加 CNAME 记录
+# ssh.yourdomain.com  CNAME  <tunnel-id>.cfargotunnel.com
+
+# 5. 安装为系统服务（可选，实现开机自启）
+sudo cloudflared service install
+```
+
+### SSH 场景示例
+
+切换到 Named Tunnel 后，在客户端的 `~/.ssh/config` 中配置 ProxyCommand，即可像普通 SSH 一样连接：
+
+```ssh-config
+Host my-server
+    HostName ssh.yourdomain.com
+    User youruser
+    ProxyCommand cloudflared access tcp --hostname %h --url localhost:%p
+```
+
+之后直接 `ssh my-server` 即可，无需手动启动代理进程。
 
 ### SSH 认证加固
 

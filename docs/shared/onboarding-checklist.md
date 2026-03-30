@@ -45,9 +45,9 @@
 ## Phase 5：开发工具链
 
 - [ ] GitHub CLI (`gh`) 安装
-- [ ] copilot-cli 安装（如有订阅）
-- [ ] cursor-agent 安装（如有订阅）
-- [ ] claude-code 安装（如有订阅）
+- [ ] copilot-api 安装（如有订阅）<!-- 安装：npm i -g copilot-api 或源码编译 -->
+- [ ] Cursor Agent CLI 安装（如有订阅）<!-- 安装：curl https://cursor.com/install -fsS | bash -->
+- [ ] claude-code 安装（如有订阅）<!-- 安装：npm i -g @anthropic-ai/claude-code -->
 - [ ] 开发相关 CLI（docker, make 等按需）
 
 ## Phase 6：Skills 安装
@@ -68,6 +68,7 @@
 - [ ] 配置 peers（与现有小队互联）
 - [ ] 现有小队的 peers 反向配置新成员
 - [ ] 双向 A2A 通信验证（ping-pong 测试）
+- [ ] ⚠️ 配完后务必双向验证（A → B 和 B → A 都测）。常见坑：token 配错只有单向通、新 token 覆盖了旧 token 导致其他 peer 失联
 
 ## Phase 8：网络与域名
 
@@ -81,6 +82,13 @@
 - [ ] 新节点 → 现有节点 SSH 打通（新 agent 能 SSH 到 KUMA/NEKO 等）
 - [ ] 现有节点 → 新节点 SSH 打通（KUMA/NEKO 能 SSH 到新设备）
 - [ ] 验证双向 SSH 连通
+- [ ] 配置 `~/.ssh/config`（通过 Cloudflare Tunnel 的节点需要 ProxyCommand）：
+  ```ssh-config
+  Host <node-name>
+      HostName <node-domain>.shazhou.work
+      User <username>
+      ProxyCommand cloudflared access tcp --hostname %h --url localhost:%p
+  ```
 - [ ] 用途：跨节点救援、协作部署、故障恢复
 
 ## Phase 10：知识系统
@@ -100,6 +108,7 @@
 - [ ] cloudflared Named Tunnel daemon 化 + 开机自启
 - [ ] 保活策略验证（KeepAlive / Restart=always）
 - [ ] 验证重启后所有服务自动恢复
+- [ ] ⚠️ macOS 注意：某些 CLI 工具（如 Cursor Agent）依赖 macOS Keychain，SSH 远程无法访问 GUI Keychain。需用户**本地终端**首次运行以解锁 Keychain 授权
 
 ## Phase 12：权限与凭证（留给新 agent 自行申请）
 
@@ -112,6 +121,7 @@
 - [ ] SiliconFlow API Key（如需要）
 - [ ] npm Token（如需要发包）
 - [ ] 邮箱账号（如需要收发邮件）
+- [ ] Cursor API Key（如使用 Cursor Agent CLI）
 - [ ] 其他 API Keys（按需）
 
 ## Phase 13：Smoke Test
@@ -124,6 +134,13 @@
 - [ ] Heartbeat 正常运行
 - [ ] 人类确认满意 ✅
 
+## Phase 14：运维与清理策略
+
+- [ ] 配置 session 定期清理（`openclaw sessions cleanup`），防止 A2A/subagent session 累积占内存
+- [ ] 了解 session 存储位置：`~/.openclaw/agents/<agent>/sessions/sessions.json`
+- [ ] 建议：将 `openclaw sessions cleanup` 加入 HEARTBEAT.md 或 cron 定期执行
+- [ ] 监控 Gateway 内存：大量 session 会导致 RSS 膨胀，定期清理可释放内存
+
 ---
 
 ## 注意事项
@@ -133,3 +150,4 @@
 - **Auth 不代做** — 需要人类授权的事项留给新 agent 启动后自行申请
 - **每完成一个 Phase 汇报一次** — 让主人知道进度
 - **出错就停** — 不要带着错误继续，先修再推进
+- **Session 会累积** — A2A 和 subagent 每次通信都创建新 session，完成后不自动清理。长期运行务必定期 cleanup
