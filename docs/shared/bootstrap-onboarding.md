@@ -41,6 +41,55 @@ sequenceDiagram
 
 ---
 
+## 快速上手
+
+### 新设备端（人类操作）
+
+在新机器的终端执行：
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/shazhou-ww/oc-bootstrap/main/bootstrap.sh)
+```
+
+脚本会：
+
+1. 检测系统类型（macOS / Ubuntu / Debian）
+2. 安装 `cloudflared`（如未安装）
+3. 启动 Quick Tunnel 暴露本地 22 端口
+4. 在终端打印隧道地址，格式类似：
+
+```
+✅ Tunnel ready: https://abc-def-ghi.trycloudflare.com
+   Tell your agent: ssh -o ProxyCommand="cloudflared access tcp --hostname abc-def-ghi.trycloudflare.com --url localhost:2222" user@localhost
+```
+
+5. 脚本保持前台运行，**不要关闭终端**，等待 agent 接管完成
+
+### 客户端 Buddy Agent 操作
+
+收到隧道地址后，agent 执行：
+
+```bash
+# 建立本地代理（后台运行）
+cloudflared access tcp --hostname abc-def-ghi.trycloudflare.com --url localhost:2222 &
+
+# SSH 进入新设备
+ssh -p 2222 username@localhost
+```
+
+进入后完成剩余配置：复制 SSH 公钥、安装 OpenClaw、配置 Telegram Bot Token 等。
+
+### 验收标准
+
+Bootstrap 完成的标志：
+
+- [ ] 可以通过正式 SSH 公钥直接登录新设备（无需密码）
+- [ ] OpenClaw 已安装并启动
+- [ ] Agent 可以通过 Telegram 收到新设备的心跳
+- [ ] 关闭 Quick Tunnel 后，通过正式方式（Tailscale / 固定 SSH）仍可访问
+
+---
+
 ## 技术方案
 
 ### Bootstrap 脚本执行方式
@@ -53,6 +102,17 @@ bash <(curl -fsSL https://raw.githubusercontent.com/shazhou-ww/oc-bootstrap/main
     `curl | bash` 会把 curl 的 stdout 接到 bash 的 stdin，导致脚本内的 `read` 命令无法从终端读取用户输入。即使加 `</dev/tty` 重定向，在 macOS 上也不稳定。
 
     **正确做法**：用 `bash <(curl ...)` 进程替换（Process Substitution），脚本的 stdin 仍然连接到终端。
+
+    原理对比：
+    ```
+    # curl | bash（错误）
+    curl 的 stdout ──→ bash 的 stdin
+    终端 stdin ──→ 被占用，read 无法读取
+    
+    # bash <(curl ...) （正确）
+    curl 的 stdout ──→ 命名管道 /dev/fd/63 ──→ bash 读取脚本内容
+    终端 stdin ──→ 正常连接，read 可以读取
+    ```
 
 ### 建立公网 SSH 隧道
 
@@ -68,6 +128,13 @@ cloudflared tunnel --url tcp://localhost:22 --protocol http2
     - **零依赖**：不需要 Cloudflare 账号、不需要域名、不需要 Named Tunnel 配置
     - **零持久化**：隧道随进程启动/销毁，不留痕迹
     - **http2 协议**：比默认的 QUIC/UDP 更稳定，避免被某些 VPN 劫持
+
+!!! note "隧道地址提取技巧"
+    cloudflared 的隧道地址输出在 stderr，可以用以下方式提取：
+    ```bash
+    cloudflared tunnel --url tcp://localhost:22 --protocol http2 2>&1 | \
+      grep -o 'https://[a-z0-9-]*\.trycloudflare\.com'
+    ```
 
 ### 客户端连接隧道
 
@@ -87,6 +154,19 @@ ssh -p 2222 user@localhost
 ssh -o ProxyCommand="cloudflared access tcp --hostname %h --url localhost:2222" \
     -p 22 user@xxx-yyy-zzz.trycloudflare.com
 ```
+
+### Bootstrap 脚本的工作内容
+
+脚本按顺序执行以下操作：
+
+| 步骤 | 操作 | 说明 |
+|------|------|------|
+| 1 | 检测 OS 类型 | macOS/Ubuntu/Debian，选择对应包管理器 |
+| 2 | 安装 cloudflared | brew / apt / 直接下载二进制 |
+| 3 | 确认 SSH 服务运行 | macOS 需要手动开启"远程登录"，Linux 通常已启动 |
+| 4 | 启动 Quick Tunnel | `cloudflared tunnel --url tcp://localhost:22 --protocol http2` |
+| 5 | 提取并显示隧道地址 | 解析 cloudflared stderr 输出 |
+| 6 | 等待 agent 接管 | 保持前台运行，Ctrl+C 可中断 |
 
 ---
 
@@ -163,10 +243,30 @@ Bootstrap 场景优先用 Quick Tunnel。
 
 ## 安全考虑
 
-- Quick Tunnel 生成的域名是随机的，不猜测
-- 隧道仅在 bootstrap 会话期间存活，结束后自动关闭
-- Bootstrap 完成后应立即关闭隧道进程，改用正式的 SSH 访问方式
-- 脚本中不应硬编码任何密钥或 Token，敏感信息应通过环境变量或交互式输入传递
+### 隧道本身的安全性
+
+- **域名随机**：Quick Tunnel 的域名由 Cloudflare 随机生成（类似 `abc-def-ghi.trycloudflare.com`），无法被猜测或枚举
+- **临时性**：隧道与 cloudflared 进程绑定，进程结束隧道立即失效，不留持久入口
+- **流量加密**：cloudflared 到 Cloudflare 边缘节点之间全程 TLS 加密
+
+### 脚本安全最佳实践
+
+- 脚本中**不应硬编码**任何密钥、API Token 或密码
+- 敏感信息（如 OpenClaw Token）应通过**交互式输入**（`read -s`）或**环境变量**传递
+- 脚本公开托管在 GitHub，任何人都可以审计内容
+
+### 最小化暴露时间
+
+- Bootstrap 完成后，立即 `Ctrl+C` 终止 cloudflared 进程
+- 改用正式的、持久化的访问方式（Tailscale、固定公网 IP + 防火墙等）
+- 不要让 Quick Tunnel 长期运行，它是临时引导工具，不是生产访问方式
+
+### SSH 认证加固
+
+- Bootstrap 过程依赖密码 SSH，完成后应：
+    1. 将 agent 的 SSH 公钥写入 `~/.ssh/authorized_keys`
+    2. 修改 `/etc/ssh/sshd_config`，禁用密码登录：`PasswordAuthentication no`
+    3. 重启 sshd：`sudo systemctl restart sshd`
 
 ---
 
@@ -175,3 +275,4 @@ Bootstrap 场景优先用 Quick Tunnel。
 - 脚本仓库：[shazhou-ww/oc-bootstrap](https://github.com/shazhou-ww/oc-bootstrap)
 - [Cloudflare Tunnel 文档](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/)
 - [cloudflared GitHub](https://github.com/cloudflare/cloudflared)
+- [Process Substitution - Bash 手册](https://www.gnu.org/software/bash/manual/bash.html#Process-Substitution)
