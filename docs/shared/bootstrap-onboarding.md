@@ -99,7 +99,7 @@ bash <(curl -fsSL https://raw.githubusercontent.com/shazhou-ww/oc-bootstrap/main
 ```
 
 !!! warning "为什么不用 `curl | bash`"
-    `curl | bash` 会把 curl 的 stdout 接到 bash 的 stdin，导致脚本内的 `read` 命令无法从终端读取用户输入。即使加 `</dev/tty` 重定向，在 macOS 上也不稳定。
+    `curl | bash` 会把 curl 的 stdout 接到 bash 的 stdin，导致脚本内的 `read` 命令无法从终端读取用户输入。即使加 `< /dev/tty` 重定向，在 macOS 上也不稳定。
 
     **正确做法**：用 `bash <(curl ...)` 进程替换（Process Substitution），脚本的 stdin 仍然连接到终端。
 
@@ -177,7 +177,7 @@ ssh -o ProxyCommand="cloudflared access tcp --hostname %h --url localhost:2222" 
 **问题**：`curl https://... | bash` 模式下，脚本中的交互式 `read` 命令无法读取用户输入，因为 stdin 已被 curl 的输出占据。
 
 **尝试过的修复**（均不可靠）：
-- `read var </dev/tty`：在 Linux 可能有效，但在 macOS 不稳定
+- `read var < /dev/tty`：在 Linux 可能有效，但在 macOS 不稳定
 - 提前关闭 stdin：无法从脚本内部做到
 
 **正确方案**：`bash <(curl -fsSL ...)` 进程替换，脚本拿到真正的 tty stdin。
