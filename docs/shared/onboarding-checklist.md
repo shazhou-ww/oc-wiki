@@ -1,6 +1,6 @@
 # Onboarding Buddy Checklist
 
-新设备 onboarding 的完整检查清单。由 buddy agent 在 SSH 进入新设备后逐项执行。
+新设备 onboarding 的完整检查清单。Buddy agent 负责能代做的部分，需要认证/权限的留给新 agent 启动后自行向主人申请。
 
 ---
 
@@ -15,6 +15,7 @@
 - [ ] Node.js v22+ 安装
 - [ ] OpenClaw 安装（`npm install -g openclaw`）
 - [ ] pnpm 安装（skill 安装需要）
+- [ ] bun 安装（copilot-api 需要）
 - [ ] git 配置（user.name / user.email）
 
 ## Phase 2：身份与人格
@@ -28,8 +29,8 @@
 
 ## Phase 3：LLM Provider 配置
 
-- [ ] LiteLLM 接入（共享实例或自建）
-- [ ] copilot-api 配置（如有 Copilot 订阅）
+- [ ] LiteLLM 接入配置（写入 openclaw.json）
+- [ ] copilot-api 源码 + 依赖安装
 - [ ] openclaw.json models 配置
 - [ ] Model fallbacks 设置（主 → 备 → 兜底）
 - [ ] 验证：agent 能正常回复消息
@@ -43,8 +44,7 @@
 
 ## Phase 5：开发工具链
 
-- [ ] GitHub CLI (`gh`) 安装 + 认证
-- [ ] git 全局配置
+- [ ] GitHub CLI (`gh`) 安装
 - [ ] copilot-cli 安装（如有订阅）
 - [ ] cursor-agent 安装（如有订阅）
 - [ ] claude-code 安装（如有订阅）
@@ -68,43 +68,53 @@
 - [ ] 配置 peers（与现有小队互联）
 - [ ] 现有小队的 peers 反向配置新成员
 - [ ] 双向 A2A 通信验证（ping-pong 测试）
-- [ ] 公网域名配置（Named Tunnel / DNS 记录）
-- [ ] nginx 反代 + SSL（如在 VM 上）
 
-## Phase 8：知识系统
+## Phase 8：网络与域名
+
+- [ ] 分配公网域名（如 `oc-sora.shazhou.work`）
+- [ ] 配置 Named Tunnel（Cloudflare）或 A 记录（VM）
+- [ ] nginx 反代 + SSL（如在 VM 上）
+- [ ] 验证域名可达（Agent Card URL 能访问）
+
+## Phase 9：节点互联（SSH 互信）
+
+- [ ] 新节点 → 现有节点 SSH 打通（新 agent 能 SSH 到 KUMA/NEKO 等）
+- [ ] 现有节点 → 新节点 SSH 打通（KUMA/NEKO 能 SSH 到新设备）
+- [ ] 验证双向 SSH 连通
+- [ ] 用途：跨节点救援、协作部署、故障恢复
+
+## Phase 10：知识系统
 
 - [ ] memex CLI 安装 + 配置
-- [ ] memex cards 仓库 clone（shazhou-ww/memex-cards）
+- [ ] memex cards 仓库 clone
 - [ ] oc-wiki 仓库 clone
 - [ ] MEMORY.md 初始化
 - [ ] memory/ 目录创建
 
-## Phase 9：权限与凭证
+## Phase 11：Daemon 与保活
 
-需要人类主人提供的权限清单：
+- [ ] OpenClaw Gateway daemon 化 + 开机自启：
+  - **Linux**: `openclaw gateway install`（systemd）
+  - **macOS**: `openclaw gateway install`（launchd）
+- [ ] copilot-api daemon 化 + 开机自启
+- [ ] cloudflared Named Tunnel daemon 化 + 开机自启
+- [ ] 保活策略验证（KeepAlive / Restart=always）
+- [ ] 验证重启后所有服务自动恢复
 
-- [ ] GitHub 账号/Token（或 gh auth login 授权）
-- [ ] Cloudflare API Token（DNS 管理）
-- [ ] LiteLLM API Key
+## Phase 12：权限与凭证（留给新 agent 自行申请）
+
+以下项目 buddy agent **不代做**，在新 agent 的 MEMORY.md 或启动留言中列出，让她启动后自行向主人申请：
+
+- [ ] GitHub 认证（`gh auth login`）
+- [ ] Copilot API 认证（`copilot-api auth`）
+- [ ] Cloudflare API Token
+- [ ] LiteLLM API Key（如未预配）
 - [ ] SiliconFlow API Key（如需要）
 - [ ] npm Token（如需要发包）
 - [ ] 邮箱账号（如需要收发邮件）
 - [ ] 其他 API Keys（按需）
 
-## Phase 10：Gateway 上线
-
-- [ ] openclaw gateway start
-- [ ] 服务 daemon 化 + 开机自启：
-  - **Linux**: systemd service (`openclaw gateway install`)
-  - **macOS**: launchd plist (`~/Library/LaunchAgents/`)
-- [ ] copilot-api daemon 化 + 开机自启（如使用）
-- [ ] cloudflared tunnel daemon 化 + 开机自启（如使用 Named Tunnel）
-- [ ] 保活策略配置（KeepAlive / Restart=always）
-- [ ] Gateway 健康检查
-- [ ] Telegram/飞书消息收发验证
-- [ ] A2A 端到端验证
-
-## Phase 11：Smoke Test
+## Phase 13：Smoke Test
 
 - [ ] Agent 能通过 IM 正常对话
 - [ ] Agent 能执行 shell 命令
@@ -120,5 +130,6 @@
 
 - **先立新再拆旧** — 如果是迁移，确保新环境完全验证后再关旧的
 - **Token 传输** — 只通过 A2A 或主人居中传递，不在 IM 里发
+- **Auth 不代做** — 需要人类授权的事项留给新 agent 启动后自行申请
 - **每完成一个 Phase 汇报一次** — 让主人知道进度
 - **出错就停** — 不要带着错误继续，先修再推进
