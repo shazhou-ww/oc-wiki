@@ -181,17 +181,27 @@ CREATE (s:Session {
 
 #### 边类型（Edge Schema）
 
+**一级关系（系统内置，有索引加速）：**
+
 | 关系类型 | 方向 | 含义 | 示例 |
 |---------|------|------|------|
-| `RELATES_TO` | 双向 | 通用相关性 | A 和 B 都涉及 GraphQL |
+| `CAUSES` / `CAUSED_BY` | 单向 | 因果关系 | 内存溢出由于未设 limit |
 | `DEPENDS_ON` | 单向 | 依赖关系 | Docker 部署依赖于构建脚本 |
-| `CAUSED_BY` | 单向 | 因果关系 | 内存溢出由于未设 limit |
 | `SIMILAR_TO` | 双向 | 相似模式 | 两个 Bug 都是类型错误 |
 | `CONTRADICTS` | 双向 | 矛盾/替代 | 旧方案 vs 新方案 |
 | `TEMPORAL_NEXT` | 单向 | 时序后继 | 决策 B 在决策 A 之后 |
 | `EXTRACTED_FROM` | 单向 | 提取自 session | Card → Session |
 
+**二级关系（自定义，自由命名）：**
+
+- 在 Kuzu 里用统一的 `CUSTOM` 边表，`type` 字段区分关系名
+- distill 时 LLM 可以自由命名关系（如 `INSPIRED_BY`, `CONFLICTS_WITH`, `SUPERSEDES` 等）
+- introspect 的 consolidate 阶段做关系聚类，高频自定义关系可提升为一级
+- **这体现了"识从业中涌现"的理念** — 系统从实际使用中学习新的关系类型
+
 #### Edge 属性
+
+**一级关系示例**：
 ```cypher
 CREATE (a:Card)-[r:DEPENDS_ON {
   weight: FLOAT,        // 关系强度 (0.0-1.0)
@@ -200,10 +210,41 @@ CREATE (a:Card)-[r:DEPENDS_ON {
 }]->(b:Card)
 ```
 
+**自定义关系示例**：
+```cypher
+CREATE (a:Card)-[r:CUSTOM {
+  type: STRING,         // 自定义关系名（如 "INSPIRED_BY"）
+  weight: FLOAT,
+  created_at: TIMESTAMP,
+  reason: STRING
+}]->(b:Card)
+```
+
+#### 关系 Embedding
+
+每种关系（包括自定义）都有 embedding，用于关系聚类和相似度计算：
+
+```typescript
+interface RelationEmbedding {
+  relation: string;      // 关系名（如 "DEPENDS_ON" 或 "INSPIRED_BY"）
+  vector: number[];      // embedding (1024-dim)
+  frequency: number;     // 使用频次
+  is_core: boolean;      // 是否为一级关系
+  examples: string[];    // 使用示例
+}
+```
+
+**关系 embedding 生成策略**：
+- 核心关系在 `init` 时预生成（基于关系名 + 定义）
+- 自定义关系在 distill 创建时自动生成（基于关系名 + reason）
+- introspect 时做关系聚类，发现高相似度的关系对→建议合并或标记别名
+- 存储在 L1 的独立表中
+
 ### 3.3 L1 唤醒层（Embedding DB）
 
 #### LanceDB Schema
 
+**卡片 Embedding 表**：
 ```typescript
 interface EmbeddingRecord {
   id: string;              // card-{uuid}
@@ -220,6 +261,19 @@ interface EmbeddingRecord {
     tags: string[];
     type: string;
   };
+}
+```
+
+**关系 Embedding 表**：
+```typescript
+interface RelationEmbedding {
+  relation: string;        // 关系名
+  vector: number[];        // embedding (1024-dim)
+  frequency: number;       // 使用频次
+  is_core: boolean;        // 是否为一级关系
+  examples: string[];      // 使用示例（用于生成 embedding）
+  created_at: number;
+  updated_at: number;
 }
 ```
 
@@ -408,75 +462,185 @@ Channel: {channel}
 
 ---
 
-### 4.4 `alaya recall <query>`
+### 4.4 `alaya recall`
 
-**功能**: 从意象/关键词快速激活相关记忆
+**功能**: 从概念/关系快速激活相关记忆（启发式搜索导航模式）
 
-**参数**:
-- `<query>`: 自然语言查询
+**设计哲学变化**: recall 的调用者是 agent，不是人类用户。Agent 有结构化表达能力，不需要退化成自然语言搜索。recall 不是一次性搜索，而是知识空间的导航——每次返回"当前位置 + 可走的路 + 离目标的距离"。
+
+**三种调用模式**:
+
+```bash
+# 简单模式（向后兼容，人类手动查询）
+alaya recall "Gateway 配置"
+
+# 结构化模式（agent 专用）
+alaya recall --concepts "Gateway重启,Telegram消息" --rel CAUSED_BY --depth 2
+
+# JSON stdin 模式（agent 通过 exec 调用）
+echo '{"concepts":["Gateway重启"],"relations":["CAUSED_BY"],"depth":2}' | alaya recall --json
+```
+
+**Agent 如何知道可用关系**:
+- Skill 里静态声明核心关系类型（见 5.1 节）
+- `alaya schema --relations` 命令动态发现所有关系（含自定义）
+
+**Recall 内部零 LLM 调用**:
+- 概念提取由 agent 完成（agent 本来就在推理）
+- 关系选择由 agent 指定
+- recall 内部只做 embedding API + 本地图查询
+- 延迟 <100ms
 
 **流程**:
 
 ```
-1. 对 query 生成 embedding
+1. 对 concepts 生成 embeddings（如果是自然语言查询，先提取概念）
    ↓
 2. L1: 向量检索（top 20，cosine similarity）
    ↓
 3. L2: 图遍历扩展
-   - 对 top 5 结果，遍历 1-hop 邻居
-   - 按关系权重排序
+   - 如果指定了 relations，只沿这些边类型遍历
+   - 计算每个节点的 h_distance（启发式距离）
+   - 按 h_distance 排序
    ↓
-4. L3: 获取原始上下文（可选）
+4. 返回：当前节点 + 可探索的路径 + 平均距离
    ↓
 5. 更新 access_count + last_accessed
-   ↓
-6. 返回排序结果（relevance score）
 ```
 
-**输出格式**:
+**启发式距离公式**:
+```
+h(node) = α × concept_distance + β × relation_distance + γ × depth_penalty
+
+其中：
+- concept_distance: 概念 embedding 与节点 embedding 的余弦距离
+- relation_distance: 1 - rel_similarity（关系匹配度）
+- depth_penalty: 遍历深度的惩罚项（0.1 × depth）
+- α=0.5, β=0.3, γ=0.2（可配置）
+```
+
+**返回结构（启发式导航模式）**:
 ```json
 {
-  "query": "Telegram 消息通知",
-  "results": [
+  "nodes": [
     {
-      "card_id": "card-abc123",
-      "title": "Telegram 消息通知机制",
+      "card_id": "card-abc",
+      "title": "Gateway plugins.allow 遗漏导致消息中断",
       "content": "...",
-      "score": 0.92,
-      "type": "concept",
-      "tags": ["telegram", "notification"],
-      "related": [
-        {
-          "card_id": "card-def456",
-          "title": "Gateway 重启前发通知的模式",
-          "relation": "DEPENDS_ON",
-          "score": 0.85
-        }
-      ],
-      "source_sessions": ["session-20260331-062900"]
+      "score": 0.89,
+      "h_distance": 0.15,
+      "matched_rel": "CAUSED_BY",
+      "rel_similarity": 1.0
+    },
+    {
+      "card_id": "card-def",
+      "title": "配置变更引发的连锁故障",
+      "content": "...",
+      "score": 0.72,
+      "h_distance": 0.31,
+      "matched_rel": "LED_TO",
+      "rel_similarity": 0.93
     }
   ],
-  "took_ms": 45
+  "explorable": [
+    {"rel": "DEPENDS_ON", "count": 2, "rel_sim_to_query": 0.41},
+    {"rel": "TEMPORAL_NEXT", "count": 1, "rel_sim_to_query": 0.22}
+  ],
+  "h_distance_avg": 0.23
 }
 ```
 
-**CLI 输出**:
+**多轮导航（Agent 自主探索）**:
+
+Agent 拿到结果后判断 `h_distance_avg` 是否足够小（< 0.3）：
+- 如果足够小，说明已找到相关知识，结束
+- 如果不够，可以从返回的节点出发，沿 `explorable` 的关系继续探索
+- 支持 `from_nodes` 参数：从指定节点继续导航
+
+```json
+{
+  "from_nodes": ["card-abc"],
+  "relations": ["DEPENDS_ON"],
+  "depth": 1
+}
 ```
-🔍 Recalling: "Telegram 消息通知"
 
-[1] Telegram 消息通知机制 (0.92) #concept
+**Agent 自己决定什么时候停。**
+
+**CLI 输出示例**:
+```
+🔍 Recalling: concepts=["Gateway重启"] relations=["CAUSED_BY"] depth=2
+
+[1] Gateway plugins.allow 遗漏导致消息中断 (h=0.15) #gotcha
+    matched: CAUSED_BY (rel_sim=1.0)
     ...（内容预览）...
-    Related: Gateway 重启前发通知的模式 (DEPENDS_ON, 0.85)
-    Source: session-20260331-062900
 
-[2] ...
+[2] 配置变更引发的连锁故障 (h=0.31) #pattern
+    matched: LED_TO (rel_sim=0.93)
+    ...（内容预览）...
 
-Found 5 cards in 45ms
+Explorable paths:
+  - DEPENDS_ON (2 nodes, rel_sim=0.41)
+  - TEMPORAL_NEXT (1 node, rel_sim=0.22)
+
+Average h_distance: 0.23 (🎯 close to target)
 ```
 
 ---
 
-### 4.5 `alaya trace <card-id>`
+### 4.5 `alaya schema`
+
+**功能**: 查看数据模型信息（关系类型、节点统计等）
+
+**子命令**:
+
+#### `alaya schema --relations`
+
+列出所有关系类型及使用频次（包括核心关系和自定义关系）。
+
+**输出示例**:
+```
+📊 Relation Types
+
+Core Relations (built-in, indexed):
+  CAUSES / CAUSED_BY    1,234 uses
+  DEPENDS_ON            3,456 uses
+  SIMILAR_TO            2,890 uses
+  CONTRADICTS             456 uses
+  TEMPORAL_NEXT         1,234 uses
+  EXTRACTED_FROM        8,512 uses
+
+Custom Relations (emergent):
+  INSPIRED_BY             89 uses  [high freq → consider promoting]
+  SUPERSEDES              67 uses
+  CONFLICTS_WITH          45 uses
+  RELATES_TO             234 uses  [generic, consider splitting]
+  ...
+
+Total: 15,678 edges (6 core types + 23 custom types)
+```
+
+#### `alaya schema --node-types`
+
+列出节点类型统计。
+
+**输出示例**:
+```
+📊 Node Types
+
+Cards:
+  concept    3,241 (38%)
+  pattern    2,103 (25%)
+  gotcha     1,876 (22%)
+  decision   1,292 (15%)
+  Total:     8,512
+
+Sessions:  1,234
+```
+
+---
+
+### 4.6 `alaya trace <card-id>`
 
 **功能**: 从识（card）回溯到业（原始 session 上下文）
 
@@ -506,7 +670,7 @@ Found 5 cards in 45ms
 
 ---
 
-### 4.6 `alaya introspect`
+### 4.7 `alaya introspect`
 
 **功能**: 高阶命令，执行深度记忆整理
 
@@ -519,7 +683,9 @@ Found 5 cards in 45ms
 
 **流程细节**:
 
-#### 4.6.1 Consolidate（合并相似卡片）
+#### 4.7.1 Consolidate（合并相似卡片 + 关系聚类）
+
+**卡片聚类**:
 ```
 1. 对所有 HOT/WARM 卡片做聚类（embedding clustering）
    ↓
@@ -534,7 +700,23 @@ Found 5 cards in 45ms
    - 如果没有，建议创建 SIMILAR_TO 边
 ```
 
-#### 4.6.2 Cool-down（温度降级）
+**关系聚类（识从业中涌现）**:
+```
+1. 对所有自定义关系做 embedding clustering
+   ↓
+2. 对于相似度 > 0.9 的关系对：
+   - 建议合并或标记别名（如 "INSPIRED_BY" ≈ "INFLUENCED_BY"）
+   - 提示用户是否统一命名
+   ↓
+3. 对于使用频次 > 100 的高频自定义关系：
+   - 建议提升为一级关系（添加索引）
+   - 输出升级脚本
+   ↓
+4. 对于关系名模糊的（如 "RELATES_TO", "LINKED_TO"）：
+   - 建议细化为更具体的关系类型
+```
+
+#### 4.7.2 Cool-down（温度降级）
 ```
 1. 重新计算所有卡片温度
    ↓
@@ -550,7 +732,7 @@ Found 5 cards in 45ms
    - 保留 L2 节点和 metadata
 ```
 
-#### 4.6.3 Forget（合理遗忘）
+#### 4.7.3 Forget（合理遗忘）
 ```
 对于满足以下条件的 COLD 卡片：
   - temperature < 0.1
@@ -590,7 +772,7 @@ Found 5 cards in 45ms
 
 ---
 
-### 4.7 `alaya link <id-a> <id-b> [--rel type]`
+### 4.8 `alaya link <id-a> <id-b> [--rel type]`
 
 **功能**: 手动补充 L2 关系
 
@@ -609,7 +791,7 @@ Found 5 cards in 45ms
 
 ---
 
-### 4.8 `alaya status`
+### 4.9 `alaya status`
 
 **功能**: 各层统计
 
@@ -651,7 +833,7 @@ Temperature Distribution
 
 ---
 
-### 4.9 `alaya export`
+### 4.10 `alaya export`
 
 **功能**: 导出为可读格式
 
@@ -691,9 +873,54 @@ Activate when:
 - Session ends (trigger ingest + distill)
 - User asks "do you remember..."
 
-Usage:
-- `alaya recall <query>` → inject results into context
-- `alaya trace <card-id>` → show original discussion
+## 可用关系类型（核心关系）
+
+在结构化 recall 中，优先使用以下核心关系：
+- `CAUSES` / `CAUSED_BY` - 因果关系
+- `DEPENDS_ON` - 依赖关系
+- `SIMILAR_TO` - 相似模式
+- `CONTRADICTS` - 矛盾/替代
+- `TEMPORAL_NEXT` - 时序后继
+- `EXTRACTED_FROM` - 提取自 session
+
+动态发现所有关系（含自定义）：
+```bash
+alaya schema --relations
+```
+
+## 使用方法
+
+### 简单查询（向后兼容）
+```bash
+alaya recall "Gateway 配置"
+```
+
+### 结构化查询（推荐 Agent 使用）
+```bash
+# 指定概念和关系
+alaya recall --concepts "Gateway重启,Telegram消息" --rel CAUSED_BY --depth 2
+
+# JSON stdin 模式（exec 调用）
+echo '{"concepts":["Gateway重启"],"relations":["CAUSED_BY"],"depth":2}' | alaya recall --json
+```
+
+### 多轮导航模式
+```bash
+# 第一轮：初始查询
+result=$(alaya recall --concepts "Gateway重启" --json)
+h_distance=$(echo $result | jq '.h_distance_avg')
+
+# 如果 h_distance > 0.3，继续探索
+if (( $(echo "$h_distance > 0.3" | bc -l) )); then
+  from_nodes=$(echo $result | jq -r '.nodes[0].card_id')
+  alaya recall --from-nodes "$from_nodes" --rel DEPENDS_ON --depth 1 --json
+fi
+```
+
+### 追踪原始上下文
+```bash
+alaya trace <card-id>
+```
 ```
 
 #### 触发时机
