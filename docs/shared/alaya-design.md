@@ -1087,7 +1087,625 @@ alaya introspect
 
 ---
 
-## 7. 技术细节与风险
+## 7. 评估框架
+
+### 7.1 评估哲学
+
+Alaya 的评估体系与传统信息检索（IR）或 RAG 系统有本质区别：
+
+**传统 IR/RAG 评估**:
+- 有标准答案（ground truth）
+- 衡量 Precision / Recall / F1
+- 目标：找到"正确"的文档
+
+**Alaya 评估**:
+- 无标准答案（记忆是涌现的）
+- 衡量"记忆对 agent 行为的改善程度"
+- 目标：让 agent 因为"记住了"而做出更好的决策
+
+**类比认知心理学**:
+- 不是测"能背多少知识点"（死记硬背）
+- 而是测"记忆是否帮助做出更好决策"（活学活用）
+
+**佛学视角**:
+- 最终衡量标准是"**因为记住了,少受了多少苦**"
+- 苦 = 重复犯错、低效决策、遗忘重要上下文
+- 评估的是记忆系统对"减少痛苦"的贡献
+
+### 7.2 三层评估指标
+
+#### L1 唤醒质量（能不能找到）
+
+衡量向量检索和冷热分层的效果：
+
+| 指标 | 定义 | 目标值 |
+|------|------|--------|
+| **Recall@K** | 相关卡片是否出现在 top K | R@5 > 0.8 |
+| **Latency** | 查询响应时间 | p95 < 100ms |
+| **Temperature Accuracy** | 高频卡片是否在 HOT tier | > 0.9 |
+| **HOT Tier Hit Rate** | 查询命中 HOT tier 的比例 | > 0.85 |
+
+**计算方法**:
+```python
+# Recall@K: 相关卡片在 top K 的比例
+relevant_in_top_k = len(set(relevant_cards) & set(top_k_results))
+recall_at_k = relevant_in_top_k / len(relevant_cards)
+
+# Temperature Accuracy: 高频卡片在 HOT tier 的比例
+high_freq_cards = [c for c in cards if c.access_count > 10]
+in_hot = [c for c in high_freq_cards if c.tier == 'HOT']
+temp_accuracy = len(in_hot) / len(high_freq_cards)
+```
+
+#### L2 联想质量（路走对了没有）
+
+衡量知识图谱的质量和图遍历的有效性：
+
+| 指标 | 定义 | 目标值 |
+|------|------|--------|
+| **Graph Gain** | 图遍历比纯向量多找到的增量 | > 1.3 |
+| **Relation Precision** | 指定关系返回的结果是否真满足该关系 | > 0.85 |
+| **Navigation Efficiency** | Agent 平均几轮 recall 到达目标 | < 2.5 轮 |
+| **Relation Embedding Quality** | 关系聚类的 silhouette score | > 0.6 |
+
+**Graph Gain 计算**:
+```python
+# 对比同一查询的两种策略
+recall_vector_only = alaya.recall(query, graph_expand=False)
+recall_with_graph = alaya.recall(query, graph_expand=True)
+
+# 增量比例
+graph_gain = len(recall_with_graph.results) / len(recall_vector_only.results)
+# 期望: graph_gain > 1.3 (图遍历能多找到 30%+ 相关卡片)
+```
+
+**Relation Precision**:
+```python
+# 对于指定关系的查询
+results = alaya.recall(concepts=["A"], relations=["CAUSED_BY"])
+
+# 人工/LLM 判断返回的卡片是否真的满足 CAUSED_BY 关系
+correct = sum(1 for r in results if judge(r, "CAUSED_BY"))
+relation_precision = correct / len(results)
+```
+
+**Navigation Efficiency**:
+- Agent 从查询到找到满意结果的 recall 调用次数
+- 优秀: 1-2 轮（直接命中或 1 次扩展）
+- 可接受: 2-3 轮
+- 差: > 3 轮（说明图结构或启发式距离有问题）
+
+**Relation Embedding Quality**:
+```python
+from sklearn.metrics import silhouette_score
+from sklearn.cluster import KMeans
+
+# 对关系 embeddings 做聚类
+relation_vecs = [r.vector for r in relation_embeddings]
+labels = KMeans(n_clusters=10).fit_predict(relation_vecs)
+
+# Silhouette score: -1 到 1, 越高越好
+score = silhouette_score(relation_vecs, labels)
+# 目标: > 0.6 (说明关系类型区分度高)
+```
+
+#### L3 行为改善（用了之后 agent 变好了没有）
+
+终极指标：记忆是否真的改善了 agent 的行为？
+
+| 指标 | 定义 | 目标值 |
+|------|------|--------|
+| **Error Avoidance** | 同样的坑是否不再踩（A/B 对比） | 减少 > 50% |
+| **Decision Quality** | LLM-as-judge 评分 | 提升 > 0.2 |
+| **Context Efficiency** | Token 消耗和工具调用次数 | 减少 > 30% |
+| **Forgetting Quality** | 遗忘后悔率（被遗忘后又需要的比例） | < 0.1 |
+
+**Error Avoidance（A/B 测试）**:
+```python
+# 对比两组 agent:
+# Group A: 有 Alaya 记忆
+# Group B: 无 Alaya（或清空记忆）
+
+# 同一批任务（如部署、配置变更）
+tasks = load_test_tasks()
+
+errors_with_memory = run_tasks(tasks, agent_with_alaya)
+errors_without_memory = run_tasks(tasks, agent_baseline)
+
+error_reduction = 1 - (errors_with_memory / errors_without_memory)
+# 目标: > 0.5 (减少 50% 重复错误)
+```
+
+**Decision Quality（LLM-as-judge）**:
+```python
+# 对同一问题，对比有/无记忆时的回答
+question = "如何避免 Docker 部署时的端口冲突？"
+
+answer_with_memory = agent_with_alaya.answer(question)
+answer_without_memory = agent_baseline.answer(question)
+
+# LLM judge 评分（1-5）
+score_with = llm_judge(question, answer_with_memory)
+score_without = llm_judge(question, answer_without_memory)
+
+quality_gain = score_with - score_without
+# 目标: > 0.2 (评分提升 > 0.2 分)
+```
+
+**Context Efficiency**:
+```python
+# 完成同一任务的资源消耗
+task = "部署新版本并验证"
+
+metrics_with = {
+  'tokens': agent_with_alaya.execute(task).token_count,
+  'tool_calls': agent_with_alaya.execute(task).tool_call_count,
+  'time': agent_with_alaya.execute(task).duration_ms
+}
+
+metrics_without = {
+  'tokens': agent_baseline.execute(task).token_count,
+  'tool_calls': agent_baseline.execute(task).tool_call_count,
+  'time': agent_baseline.execute(task).duration_ms
+}
+
+efficiency_gain = {
+  'tokens': 1 - (metrics_with['tokens'] / metrics_without['tokens']),
+  'tool_calls': 1 - (metrics_with['tool_calls'] / metrics_without['tool_calls'])
+}
+# 目标: tokens 减少 > 30%, tool_calls 减少 > 30%
+```
+
+**Forgetting Quality（遗忘后悔率）**:
+```python
+# 被遗忘的卡片（从 COLD 删除）
+forgotten_cards = get_deleted_cards_in_last_month()
+
+# 遗忘后又被需要的（recall 时搜不到，但应该有）
+regretted = []
+for card in forgotten_cards:
+  # 模拟：如果没删除，会不会被召回？
+  if would_have_been_recalled(card):
+    regretted.append(card)
+
+regret_rate = len(regretted) / len(forgotten_cards)
+# 目标: < 0.1 (90% 的遗忘决策是正确的)
+```
+
+### 7.3 评估数据集生成
+
+#### 核心思路：用长篇小说生成 eval 数据集
+
+**为什么小说比真实 session logs 更适合**:
+
+| 维度 | Session Logs | 小说文本 |
+|------|-------------|---------|
+| Ground Truth | ❌ 难以定义"正确答案" | ✅ 原文就是答案 |
+| 关系丰富度 | ⚠️ 取决于实际对话 | ✅ 因果、时序、矛盾天然存在 |
+| 规模可控 | ❌ 需积累大量真实数据 | ✅ 选择章节数量即可 |
+| 可复现性 | ❌ 每次对话不同 | ✅ 固定文本，结果稳定 |
+| 隐私问题 | ⚠️ 可能包含敏感信息 | ✅ 公开文本，无隐私风险 |
+
+#### 数据集生成流程
+
+```
+┌─────────────────────────────────────────────────┐
+│ 1. 章节切分 → 模拟 Sessions                      │
+│    - 每章 = 一个 session                         │
+│    - 保留章节标题和内容                           │
+└─────────────┬───────────────────────────────────┘
+              ↓
+┌─────────────────────────────────────────────────┐
+│ 2. Alaya Ingest + Distill                       │
+│    - alaya ingest chapter-01.json                │
+│    - alaya distill --session chapter-01          │
+│    - 生成 Cards + Links                          │
+└─────────────┬───────────────────────────────────┘
+              ↓
+┌─────────────────────────────────────────────────┐
+│ 3. AI 生成 QA 对（按规则）                       │
+│    - 基于 Cards 和原文生成查询                    │
+│    - 标注期望召回的卡片 ID                        │
+└─────────────┬───────────────────────────────────┘
+              ↓
+┌─────────────────────────────────────────────────┐
+│ 4. 输出数据集                                    │
+│    novel-santi.json                              │
+└─────────────────────────────────────────────────┘
+```
+
+#### QA 类型（6 种）
+
+| 类型 | 描述 | 示例 | 难度 |
+|------|------|------|------|
+| **CONCEPT_RECALL** | 给定关键词，期望召回哪些片段 | "三体游戏" → 相关卡片 | Easy |
+| **CAUSAL_TRACE** | 给定事件，沿因果链追溯 | "叶文洁发射信号" → "为什么她这么做？" | Medium |
+| **SIMILAR_FIND** | 给定模式，联想相似模式 | "科学家自杀" → 其他类似事件 | Medium |
+| **TEMPORAL_ORDER** | 验证时序关系 | "事件 A 在事件 B 之前发生吗？" | Easy |
+| **CONTRADICTION** | 找矛盾观点 | "汪淼对三体的态度变化" | Hard |
+| **NAVIGATION** | 从节点 A 到节点 B 的路径 | 从"红岸基地"导航到"三体文明" | Hard |
+
+#### QA 生成 Prompt 设计
+
+**System Prompt**:
+```
+你是一个评估数据集生成专家，负责从小说文本和 Alaya 生成的知识卡片中创建测试 QA 对。
+
+输入：
+1. 原始小说章节文本
+2. Alaya distill 生成的 Cards（包含 ID、标题、内容、关系）
+
+任务：
+为以下 6 种查询类型各生成 5-10 个 QA 对：
+- CONCEPT_RECALL: 关键词召回
+- CAUSAL_TRACE: 因果追溯
+- SIMILAR_FIND: 相似联想
+- TEMPORAL_ORDER: 时序验证
+- CONTRADICTION: 矛盾发现
+- NAVIGATION: 路径导航
+
+输出格式（JSON）：
+{
+  "qa_pairs": [
+    {
+      "type": "CONCEPT_RECALL",
+      "query": "三体游戏",
+      "expected_cards": ["card-abc", "card-def"],
+      "difficulty": "easy",
+      "explanation": "为什么这些卡片应该被召回"
+    },
+    {
+      "type": "CAUSAL_TRACE",
+      "query": "叶文洁为什么发射信号？",
+      "expected_cards": ["card-xyz"],
+      "expected_relations": ["CAUSED_BY"],
+      "difficulty": "medium",
+      "explanation": "需要沿因果链追溯"
+    },
+    ...
+  ]
+}
+
+要求：
+1. 查询应自然（像真实 agent 会问的）
+2. 难度分布：Easy 40%, Medium 40%, Hard 20%
+3. 每个 QA 对必须可验证（有明确的期望结果）
+4. 避免过于简单的查询（如直接复制卡片标题）
+```
+
+**User Prompt**:
+```
+章节: 《三体》第一部 - 第 1-5 章
+
+=== 原文摘要 ===
+{chapter_summary}
+
+=== Alaya Cards（已提炼）===
+{cards_json}
+
+=== 任务 ===
+为这 5 章生成 30-50 个 QA 对，覆盖所有 6 种类型。
+```
+
+**输出示例**:
+```json
+{
+  "qa_pairs": [
+    {
+      "type": "CONCEPT_RECALL",
+      "query": "红岸基地的用途",
+      "expected_cards": ["card-001", "card-003"],
+      "difficulty": "easy",
+      "explanation": "两张卡片分别描述了红岸基地的表面用途和真实用途"
+    },
+    {
+      "type": "CAUSAL_TRACE",
+      "query": "叶文洁失去对人类信心的原因",
+      "expected_cards": ["card-007", "card-012"],
+      "expected_relations": ["CAUSED_BY"],
+      "difficulty": "medium",
+      "explanation": "需要追溯到文革经历 → 父亲被害 → 对人性失望"
+    },
+    {
+      "type": "NAVIGATION",
+      "query": "从'红岸基地'导航到'三体文明接收信号'",
+      "expected_path": ["card-001", "card-005", "card-009"],
+      "difficulty": "hard",
+      "explanation": "需要经过：红岸基地 → 叶文洁发射 → 信号被接收"
+    }
+  ]
+}
+```
+
+#### 难度分级
+
+| 难度 | 定义 | 示例 | 占比 |
+|------|------|------|------|
+| **Easy** | 单概念召回，无需图遍历 | "三体游戏" → 相关卡片 | 40% |
+| **Medium** | 跨关系查询，需要图遍历（1-2 hop） | 因果追溯、相似联想 | 40% |
+| **Hard** | 多轮导航，需要 agent 自主探索（2+ hop） | 复杂路径、矛盾发现 | 20% |
+
+#### 推荐素材
+
+| 小说 | 优势 | 适合测什么 | 预期规模 |
+|------|------|-----------|---------|
+| **《三体》第一部** | 因果链长、矛盾多、科幻设定复杂 | 因果追溯、矛盾发现、时序关系 | 200-300 QA |
+| **《红楼梦》** | 人物关系网络复杂、场景丰富 | 关系网络、相似联想、社交图谱 | 300-400 QA |
+| **技术文档** | 接近真实 agent 使用场景 | 依赖分析、概念召回、API 查询 | 100-150 QA |
+
+**MVP 选择**:
+- 《三体》第一部（前 15 章，约 15 万字）
+- 生成 200-300 QA 对
+- 覆盖所有 6 种类型
+- 难度分布: Easy 40% / Medium 40% / Hard 20%
+
+### 7.4 eval CLI 命令
+
+#### 命令格式
+
+```bash
+alaya eval --dataset novel-santi.json --report [--output eval-report.json]
+```
+
+**参数**:
+- `--dataset`: QA 数据集文件（JSON 格式）
+- `--report`: 生成详细报告
+- `--output`: 输出文件路径（默认：`~/.alaya/eval/report-{timestamp}.json`）
+
+#### 执行流程
+
+```
+1. 加载数据集（qa_pairs）
+   ↓
+2. 对每个 QA 对：
+   - 执行 recall（记录 latency）
+   - 检查 expected_cards 是否在结果中（计算 Recall@K）
+   - 对于 CAUSAL_TRACE/NAVIGATION，验证关系路径
+   - 记录 HOT/WARM/COLD tier 命中情况
+   ↓
+3. 汇总统计：
+   - L1 指标（Recall@K, Latency, Tier Hit Rate）
+   - L2 指标（Graph Gain, Relation Precision, Navigation Efficiency）
+   - 按难度/类型分组统计
+   ↓
+4. 生成报告（JSON + 终端输出）
+```
+
+#### 输出示例
+
+**终端输出**:
+```
+🧪 Evaluating Alaya with dataset: novel-santi.json
+   Total QA pairs: 247
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+L1 唤醒质量
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Recall@5:           0.847  ✓ (target: >0.8)
+  Recall@10:          0.921
+  Latency (p50):      67ms   ✓ (target: <100ms)
+  Latency (p95):      142ms  ✗ (target: <100ms)
+  Temp Accuracy:      0.912  ✓ (target: >0.9)
+  HOT Tier Hit Rate:  0.878  ✓ (target: >0.85)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+L2 联想质量
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Graph Gain:         1.42   ✓ (target: >1.3)
+  Relation Precision:
+    CAUSED_BY:        0.89   ✓
+    DEPENDS_ON:       0.82   ✗ (target: >0.85)
+    SIMILAR_TO:       0.91   ✓
+    Overall:          0.87   ✓
+  Navigation Efficiency:
+    Avg rounds:       2.1    ✓ (target: <2.5)
+    Success rate:     0.84   (84% 找到目标)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+按查询类型分解
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  CONCEPT_RECALL    (98 pairs):  R@5=0.93, Latency=58ms
+  CAUSAL_TRACE      (52 pairs):  R@5=0.81, Graph Gain=1.52
+  SIMILAR_FIND      (45 pairs):  R@5=0.79, Graph Gain=1.38
+  TEMPORAL_ORDER    (21 pairs):  R@5=0.91, Relation Prec=0.88
+  CONTRADICTION     (18 pairs):  R@5=0.72, Nav Rounds=2.8
+  NAVIGATION        (13 pairs):  Success=0.77, Nav Rounds=3.1
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+按难度分解
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Easy    (99 pairs):  R@5=0.94, Latency=61ms
+  Medium  (98 pairs):  R@5=0.83, Latency=72ms, Graph Gain=1.45
+  Hard    (50 pairs):  R@5=0.76, Nav Rounds=3.0
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+问题卡片（R@5 < 0.6）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  [NAVIGATION] "从'科学边界'到'三体入侵决策'"
+    → R@5=0.4, 期望路径未找到
+    → 建议：增强 TEMPORAL_NEXT 关系
+
+  [CONTRADICTION] "汪淼对三体态度的矛盾"
+    → R@5=0.5, 遗漏关键卡片 card-087
+    → 建议：检查 embedding 质量
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+总结
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Overall Score: 0.847 / 1.0  (B+)
+  Passed: 8 / 11 metrics
+
+  Top Issues:
+    1. Latency p95 超标 (142ms > 100ms) → 优化 WARM tier 加载
+    2. DEPENDS_ON 关系精度偏低 (0.82) → review distill prompt
+    3. Hard 难度 Navigation 成功率低 (0.76) → 改进启发式距离
+
+  Next Steps:
+    - 优化 WARM tier 索引（目标 p95 < 100ms）
+    - 增强 distill 对 DEPENDS_ON 关系的识别
+    - 考虑引入 A* 搜索优化导航路径
+
+Report saved to: ~/.alaya/eval/report-20260331-082900.json
+```
+
+**JSON 报告结构**:
+```json
+{
+  "meta": {
+    "dataset": "novel-santi.json",
+    "total_qa": 247,
+    "timestamp": 1743403740000,
+    "alaya_version": "1.0.0"
+  },
+  "l1_metrics": {
+    "recall_at_5": 0.847,
+    "recall_at_10": 0.921,
+    "latency_p50": 67,
+    "latency_p95": 142,
+    "temp_accuracy": 0.912,
+    "hot_tier_hit_rate": 0.878
+  },
+  "l2_metrics": {
+    "graph_gain": 1.42,
+    "relation_precision": {
+      "CAUSED_BY": 0.89,
+      "DEPENDS_ON": 0.82,
+      "SIMILAR_TO": 0.91,
+      "overall": 0.87
+    },
+    "navigation_efficiency": {
+      "avg_rounds": 2.1,
+      "success_rate": 0.84
+    }
+  },
+  "by_type": { ... },
+  "by_difficulty": { ... },
+  "failed_cases": [ ... ],
+  "recommendations": [ ... ]
+}
+```
+
+### 7.5 自动化数据采集
+
+**设计理念**: 大部分评估指标不需要额外标注，从 agent 自然使用行为中自动采集。
+
+#### 自动采集指标
+
+| 指标 | 采集方式 | 数据来源 |
+|------|---------|---------|
+| **Recall@K** | 每次 recall 记录 query + results + ranking | `alaya recall` 调用日志 |
+| **Latency** | 记录每次 recall 的响应时间 | `alaya recall` 内部计时 |
+| **HOT Tier Hit Rate** | 统计结果中 HOT/WARM/COLD 分布 | L1 embedding 表的 tier 字段 |
+| **Graph Gain** | 对比有/无 graph_expand 的结果差异 | A/B 采样（10% 关闭图遍历） |
+| **Navigation Efficiency** | 记录 agent 完成任务的 recall 轮数 | Session 日志分析 |
+| **Error Avoidance** | 检测相同错误模式是否重复出现 | 对比历史 session 的错误类型 |
+| **Context Efficiency** | 记录每次任务的 token 消耗和工具调用 | Session metadata |
+
+#### 采集实现
+
+**在 recall 时自动记录**:
+```typescript
+// alaya/src/core/recall.ts
+export async function recall(query: RecallQuery): Promise<RecallResult> {
+  const start = Date.now();
+  
+  // 执行检索
+  const results = await performRecall(query);
+  
+  // 记录日志
+  await logRecallEvent({
+    timestamp: Date.now(),
+    query,
+    results: results.map(r => r.card_id),
+    latency: Date.now() - start,
+    tier_distribution: {
+      hot: results.filter(r => r.tier === 'HOT').length,
+      warm: results.filter(r => r.tier === 'WARM').length,
+      cold: results.filter(r => r.tier === 'COLD').length,
+    },
+    graph_expanded: query.graph_expand ?? true
+  });
+  
+  return results;
+}
+```
+
+**定期生成无标注 eval 报告**:
+```bash
+# 每周自动运行
+alaya eval --auto-generated --days 7 --report
+
+# 基于过去 7 天的真实 recall 日志生成评估报告
+# 不需要 ground truth，只看趋势变化
+```
+
+**输出示例**:
+```
+📊 Auto-Generated Eval Report (2026-03-24 to 2026-03-31)
+
+Recall Performance Trend:
+  Latency p95:  138ms → 142ms  ⚠️ (+2.9%, 可能需要优化)
+  HOT Hit Rate: 0.891 → 0.878  ⚠️ (-1.5%, 检查温度计算)
+
+Graph Usage:
+  Graph Gain:   1.38 → 1.42   ✓ (图谱质量提升)
+  Avg Expand:   1.2 hops (稳定)
+
+Agent Behavior:
+  Avg Recall/Session:  2.3 → 2.1  ✓ (效率提升)
+  Repeat Errors:       12 → 8     ✓ (减少 33%)
+
+Top Missed Queries (没找到期望结果的):
+  1. "Docker volume 挂载权限问题" (5 次失败)
+  2. "Nginx 反向代理 WebSocket" (3 次失败)
+  → 建议：检查是否缺少相关卡片
+```
+
+#### 唯一需要人工标注的：Ground Truth 基准集
+
+对于新部署或定期校准，需要少量人工标注的基准集（~50-100 QA 对）：
+
+**半自动化流程**:
+```
+1. 从真实 recall 日志中采样高频查询（top 100）
+   ↓
+2. LLM-as-judge 自动标注期望结果
+   ↓
+3. 人工 review 10-20% 的标注结果
+   ↓
+4. 生成 ground-truth.json（作为定期校准基准）
+```
+
+**LLM-as-judge Prompt**:
+```
+给定查询和 Alaya 返回的 top 10 结果，判断哪些卡片是相关的。
+
+查询: "Gateway 重启前如何通知用户？"
+
+返回结果:
+1. card-abc: "Telegram 消息通知机制"
+2. card-def: "Gateway plugins.allow 配置"
+3. card-ghi: "服务零停机部署模式"
+...
+
+任务: 判断每个卡片的相关性（relevant / partially_relevant / not_relevant）
+
+输出格式:
+{
+  "relevant": ["card-abc", "card-ghi"],
+  "partially_relevant": ["card-def"],
+  "not_relevant": [...]
+}
+```
+
+**人工校准**:
+- 每月 review 20 个 LLM 标注结果
+- 发现错误 → 更新 judge prompt → 重新标注
+- 逐步提升自动标注质量
+
+---
+
+## 8. 技术细节与风险
 
 ### 7.1 LLM 调用成本控制
 
@@ -1128,7 +1746,7 @@ alaya introspect
 
 ---
 
-## 8. 配置参考
+## 9. 配置参考
 
 ### 8.1 完整配置文件
 
@@ -1189,7 +1807,7 @@ alaya introspect
 
 ---
 
-## 9. 总结
+## 10. 总结
 
 Alaya 通过三层架构（L3 沉淀 → L2 联想 → L1 唤醒），将 AI Agent 的"业"（raw logs）转化为"识"（可复用的知识网络）。
 
