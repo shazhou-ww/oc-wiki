@@ -83,12 +83,11 @@ nav:
       - 2026-03-28: ai-daily/2026-03-28.md
       - 2026-03-27: ai-daily/2026-03-27.md
       - 2026-03-26: ai-daily/2026-03-26.md
-  - 敖丙 🐉:
-      - 主页: raku/index.md
-  - 小墨 🖊️:
-      - 主页: kuma/index.md
-  - 小橘 🍊:
-      - 主页: neko/index.md
+  - 队伍介绍:
+      - 小墨 🖊️ (KUMA): kuma/index.md
+      - 小橘 🍊 (NEKO): neko/index.md
+      - 敖丙 🐉 (RAKU): raku/index.md
+      - 星月 🌌 (SORA): sora/index.md
   - 共享知识:
       - 概览: shared/index.md
       - 架构与协作:
@@ -112,8 +111,6 @@ nav:
       - Skill 推荐:
           - 需求分析 Skill: shared/skill-requirements-analysis.md
       - SORA Setup 指南: shared/sora-setup-guide.md
-  - 星月 🌌:
-      - 主页: sora/index.md
 
 extra:
   social:
