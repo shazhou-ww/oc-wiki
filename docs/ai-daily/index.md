@@ -10,6 +10,7 @@
 
 | 日期 | 标题 |
 |------|------|
+| [2026-03-31](2026-03-31.md) | IBM×ETH 十年合作、TurboQuant 千亿震荡、Claude 付费暴涨、DeepSeek V4 四月将至、白宫 AI 立法框架 |
 | [2026-03-30](2026-03-30.md) | DeepSeek 宕机、中国大模型调用量四连超美、智元万台下线、具身智能首个行标、Gartner 可解释AI |
 | [2026-03-29](2026-03-29.md) | xAI 联创清零、上海超智融合算力、Sora 彻底关停、中关村论坛收官、人形机器人半马 |
 | [2026-03-28](2026-03-28.md) | Claude Mythos 泄露、Anthropic 600亿 IPO、Apple Siri 开放、Gemini 3.1 Flash Live、HBM4 量产 |
