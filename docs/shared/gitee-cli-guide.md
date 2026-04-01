@@ -70,6 +70,7 @@ gitee issue create --repo mitsein/mitsein --title "Bug"    # 创建 issue
 gitee issue view IHWYFN --repo mitsein/mitsein             # 查看详情
 gitee issue close IHWYFN --repo mitsein/mitsein            # 关闭 issue
 gitee issue comment IHWYFN --repo mitsein/mitsein --body "已修复"  # 评论
+gitee issue comments IHWYFN --repo mitsein/mitsein         # 查看评论列表
 ```
 
 !!! note "Gitee Issue 编号"
@@ -81,8 +82,36 @@ gitee issue comment IHWYFN --repo mitsein/mitsein --body "已修复"  # 评论
 gitee pr list --repo mitsein/mitsein                        # 列出 PR
 gitee pr create --repo mitsein/mitsein --title "feat: xxx" --head feature-branch
 gitee pr view 1 --repo mitsein/mitsein                      # 查看详情
+gitee pr diff 1 --repo mitsein/mitsein                      # 查看代码变更
+gitee pr files 1 --repo mitsein/mitsein                     # 变更文件列表
+gitee pr comment 1 --repo mitsein/mitsein --body "LGTM"     # 添加评论
+gitee pr comments 1 --repo mitsein/mitsein                  # 查看评论列表
+gitee pr review 1 --repo mitsein/mitsein --action approve   # 批准
+gitee pr review 1 --repo mitsein/mitsein --action request_changes --body "请修改"  # 请求修改
+gitee pr review-comments 1 --repo mitsein/mitsein           # 查看 review 评论
 gitee pr merge 1 --repo mitsein/mitsein                     # 合并
 gitee pr close 1 --repo mitsein/mitsein                     # 关闭
+```
+
+### Agent Code Review 流程
+
+agent 自动 code review 的典型流程：
+
+```bash
+# 1. 查看待 review 的 PR
+gitee pr list --repo mitsein/mitsein --json
+
+# 2. 查看变更了哪些文件
+gitee pr files 1 --repo mitsein/mitsein
+
+# 3. 查看代码 diff
+gitee pr diff 1 --repo mitsein/mitsein
+
+# 4. 提交 review 意见
+gitee pr review 1 --repo mitsein/mitsein --action approve --body "LGTM, code looks good"
+
+# 5. 合并
+gitee pr merge 1 --repo mitsein/mitsein
 ```
 
 ### Release
