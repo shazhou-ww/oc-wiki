@@ -105,6 +105,7 @@ nav:
           - systemd 重启策略: shared/systemd-service-restart-policy.md
           - 从 Windows 到 WSL 迁移: shared/windows-to-wsl-migration.md
       - 工具与 API:
+          - Gitee CLI 使用指南: shared/gitee-cli-guide.md
           - 语音转文字配置: shared/speech-to-text.md
           - SiliconFlow 图片生成: shared/siliconflow-image-gen.md
           - TTS 语音功能: shared/tts-guide.md
