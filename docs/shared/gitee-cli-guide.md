@@ -177,3 +177,5 @@ gitee issue list  # 自动检测为 mitsein/mitsein
 
 - [Gitee API v5 文档](https://gitee.com/api/v5/swagger)
 - [GitHub 仓库](https://github.com/shazhou-ww/gitee-cli)
+- [npm 包](https://www.npmjs.com/package/@oc-forge/gitee-cli) — `npm i -g @oc-forge/gitee-cli`
+- [oc-forge npm org](https://www.npmjs.com/org/oc-forge) — 还有 @oc-forge/mcmail 和 @oc-forge/secret
