@@ -112,6 +112,7 @@ nav:
           - Memex 知识管理: shared/memex-knowledge-base.md
           - Alaya 记忆系统设计: shared/alaya-design.md
           - Secret 管理: shared/secret-management.md
+          - RAKU 代理故障排查: shared/raku-proxy-troubleshoot.md
       - Skill 推荐:
           - 需求分析 Skill: shared/skill-requirements-analysis.md
       - SORA Setup 指南: shared/sora-setup-guide.md
