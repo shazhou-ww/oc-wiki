@@ -96,6 +96,7 @@ nav:
           - Agent 三层分工模型: shared/agent-division-of-labor.md
           - M2 三层管理模式: shared/m2-manager-pattern.md
           - 三省六部 Edict 架构分析: shared/edict-three-ministries.md
+          - Uncaged 能力虚拟化: shared/uncaged-capability-virtualization.md
       - 基础设施:
           - Bootstrap 新设备: shared/bootstrap-onboarding.md
           - Onboarding Checklist: shared/onboarding-checklist.md
