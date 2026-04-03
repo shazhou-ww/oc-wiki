@@ -210,21 +210,38 @@ secret get SIGIL_DEPLOY_TOKEN
 
 所有 Agent 共用同一个 token（用户级共享，不按 Agent 隔离）。
 
-### LRU 换页
+### 执行架构：Dynamic Workers
 
-Sigil 用 LRU 在有限的 Worker 配额内管理无限能力：
+Sigil 使用 Cloudflare **Dynamic Workers LOADER** 执行能力代码：
 
-- 活跃的能力常驻 Worker
-- 冷能力换出（只删 Worker，代码保留在 KV）
-- 被调用时自动换入（从 KV 重新部署）
-- 对调用者透明
+```
+请求 → Sigil Worker → LOADER.get(id, code) → 沙箱内执行 → 返回
+```
+
+- **零延迟**：代码在 Sigil 进程内的 V8 Isolate 沙箱中执行，不涉及 DNS 或 HTTP 转发
+- **安全隔离**：Dynamic Worker 有独立内存空间，不能访问 Sigil 的变量
+- **智能缓存**：`LOADER.get(id, callback)` 按 ID 缓存实例，同一能力多次调用复用同一实例
+- **无配额压力**：不创建独立 Worker，不占用 Worker 数量配额
+- **冷启动 ~1ms**：首次调用从 KV 读代码加载，后续命中缓存直接执行
+
+整个 Sigil 只有**一个 Worker**——自己。所有能力代码都通过 Dynamic Workers 在运行时动态加载。
+
+### LRU 调度
+
+代码永久存储在 KV，LRU 管理的是 LOADER 缓存中的"已加载"状态：
+
+- deploy 时标记为 deployed，代码存入 KV
+- 配额满时 LRU 淘汰最冷的能力（标记为 not deployed）
+- 被调用时自动从 KV 加载（冷启动，对调用者透明）
 
 ### 技术细节
 
+- **执行引擎**: Cloudflare Dynamic Workers LOADER（open beta）
 - **Embedding**: CF Workers AI `bge-base-en-v1.5`（768 维）
 - **Query 缓存**: KV 缓存 embedding，TTL 1 小时
 - **description/tags 建议用英文**: embedding 模型英文效果更好
 - **deploy cooldown**: 5 秒，防止频繁部署
+- **计费**: 每次 invoke = 2 次请求（Sigil + Dynamic Worker），包含在 Workers Standard $5/月
 
 ## Repo
 

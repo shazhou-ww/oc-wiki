@@ -369,7 +369,27 @@ Phase 4: 预热策略 + 异步换出 + 可观测性 + 告警
 - [Uncaged 能力虚拟化](uncaged-capability-virtualization.md)（前置概念）
 - [CF Workers API](https://developers.cloudflare.com/api/resources/workers/subresources/scripts/)（部署/删除 Worker）
 - [Workers for Platforms](https://developers.cloudflare.com/cloudflare-for-platforms/workers-for-platforms/)（$25 方案参考）
+- [Dynamic Workers](https://developers.cloudflare.com/dynamic-workers/)（实际采用方案）
 
 ---
 
 来源：2026-04-03 主人提出抽象接口 + 双实现方案，小橘基于 LRU 核心地位重新设计
+
+---
+
+## 架构演进记录（2026-04-03）
+
+!!! success "实际落地：Dynamic Workers LOADER"
+    设计阶段规划了三种方案（$5 LRU 换页 / $25 WfP / 预分配 Slot Pool），最终采用 **Cloudflare Dynamic Workers LOADER**（open beta），完全跳过了子 Worker 管理的复杂度。
+
+**Dynamic Workers 方案**：
+
+- Sigil 是唯一的 Worker，能力代码通过 `env.LOADER.get(id, callback)` 在运行时动态加载
+- 代码在 V8 Isolate 沙箱中执行，独立内存，安全隔离
+- 不创建独立 Worker，不占配额，零 DNS 延迟
+- `LOADER.get()` 按 ID 缓存实例，同一能力复用 Worker 实例
+- 计费：每次 invoke = 2 次请求（Sigil + Dynamic Worker）
+
+**LRU 的角色变化**：原设计中 LRU 管理"哪些 Worker 在线"（物理部署状态），现在 LRU 管理的是逻辑状态标记（deployed/not-deployed），LOADER 缓存自行管理内存中的实例生命周期。
+
+**本文档保留为设计参考**，实际实现以 [Agent 实战指南](sigil-agent-guide.md) 为准。
