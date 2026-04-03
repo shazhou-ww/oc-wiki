@@ -7,6 +7,42 @@
 **日期**: 2026-04-03  
 **前置阅读**: [Sigil 能力注册表](sigil-capability-registry.md)
 
+## 快速开始（CLI）
+
+```bash
+# 安装
+npm install -g @oc-forge/sigil-cli
+
+# 健康检查
+sigil health
+
+# 搜索能力
+sigil query "greeting"
+
+# 调用能力
+sigil invoke greet --name Scott --lang zh
+
+# 部署能力（schema + execute 模式）
+sigil deploy --name calc --desc "Simple calculator" \
+  --tags math,utility \
+  --schema '{"properties":{"expr":{"type":"string","description":"Math expression"}},"required":["expr"]}' \
+  --execute 'return JSON.stringify({result: eval(input.expr)})'
+
+# 部署能力（文件模式）
+sigil deploy hello.js --name hello --desc "Hello endpoint"
+
+# 探索所有能力
+sigil query --explore
+
+# 查看详情
+sigil inspect greet
+
+# 删除
+sigil remove calc
+```
+
+CLI 自动从 Infisical 读取 `SIGIL_DEPLOY_TOKEN`，也支持环境变量 `SIGIL_TOKEN`。
+
 ## 核心概念
 
 Worker 的本质是一个函数：**给定输入（JSON），返回输出（String）**。
@@ -245,5 +281,7 @@ Sigil 使用 Cloudflare **Dynamic Workers LOADER** 执行能力代码：
 
 ## Repo
 
-- **源码**: [github.com/oc-xiaoju/sigil](https://github.com/oc-xiaoju/sigil)
+- **Sigil 源码**: [github.com/oc-xiaoju/sigil](https://github.com/oc-xiaoju/sigil)
+- **CLI 源码**: [github.com/shazhou-ww/sigil-cli](https://github.com/shazhou-ww/sigil-cli)
+- **CLI 包**: [@oc-forge/sigil-cli](https://www.npmjs.com/package/@oc-forge/sigil-cli) — `npm install -g @oc-forge/sigil-cli`
 - **线上**: [sigil.shazhou.workers.dev](https://sigil.shazhou.workers.dev/_health)
