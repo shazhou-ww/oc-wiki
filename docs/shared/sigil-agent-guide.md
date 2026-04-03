@@ -11,7 +11,7 @@
 
 ```bash
 # 安装
-npm install -g @oc-forge/sigil-cli
+npm install -g @uncaged/sigil-cli
 
 # 健康检查
 sigil health
@@ -285,5 +285,5 @@ Sigil 使用 Cloudflare **Dynamic Workers LOADER** 执行能力代码：
 
 - **Sigil 源码**: [github.com/oc-xiaoju/sigil](https://github.com/oc-xiaoju/sigil)
 - **CLI 源码**: [github.com/shazhou-ww/sigil-cli](https://github.com/shazhou-ww/sigil-cli)
-- **CLI 包**: [@oc-forge/sigil-cli](https://www.npmjs.com/package/@oc-forge/sigil-cli) — `npm install -g @oc-forge/sigil-cli`
+- **CLI 包**: [@uncaged/sigil-cli](https://www.npmjs.com/package/@uncaged/sigil-cli) — `npm install -g @uncaged/sigil-cli`
 - **线上**: [sigil.shazhou.workers.dev](https://sigil.shazhou.workers.dev/_health)
