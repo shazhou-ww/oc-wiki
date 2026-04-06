@@ -98,6 +98,7 @@ nav:
       - 架构与协作:
           - Agent 三层分工模型: shared/agent-division-of-labor.md
           - M2 三层管理模式: shared/m2-manager-pattern.md
+          - Coding Workflow 标准流程: shared/coding-workflow.md
           - 三省六部 Edict 架构分析: shared/edict-three-ministries.md
           - Uncaged 能力虚拟化: shared/uncaged-capability-virtualization.md
           - Sigil 能力注册表: shared/sigil-capability-registry.md
