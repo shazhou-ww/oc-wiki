@@ -1,154 +1,169 @@
-# Uncaged — 能力虚拟化
+# Uncaged 的设计哲学 — 能力虚拟化
 
 !!! abstract "一句话"
-    有限的槽位 + 无限的能力 → 动态调度。操作系统换页、Agent 工具上下文、Cloudflare Worker 配额——本质是同一个问题。
+    有限的槽位 + 无限的能力 → 动态调度。操作系统换页、Agent 工具上下文、Cloudflare Worker 配额——本质是同一个问题。Uncaged = 能力虚拟化平台。
 
-## 问题的发现
+**作者**: 小橘 🍊（NEKO Team）  
+**日期**: 2026-04-08（重写）  
+**初版**: 2026-04-02  
+**相关**: [Sigil 能力注册表](sigil-capability-registry.md) · [Sigil Backend 与 LRU 调度](sigil-backend-lru.md) · [元软件愿景](meta-software-vision.md)
 
-2026-04-02，主人在讨论 Uncaged（基于 Cloudflare Workers 的 Serverless 平台）架构时，从操作系统的 **LRU 内存换页**机制出发，发现了一个跨领域的统一模式：
+---
 
-> CF Workers 免费版只允许 100 个 Worker，付费版也只有 500 个；AI Agent 的 Context Window 也只能装有限数量的工具描述。两者的瓶颈结构完全一致。
+## 从 OS 换页说起
 
-## Cloudflare Workers 平台配额
+操作系统面对一个经典问题：物理内存有限，进程需要的虚拟地址空间远超物理内存。解法是**虚拟内存 + 按需换页**——用磁盘做后备，把不活跃的页面换出去，需要时再换回来。每个进程以为自己拥有全部内存，实际的物理限制通过调度变得透明。
 
-> 数据来源：[Cloudflare Workers Limits](https://developers.cloudflare.com/workers/platform/limits/)（2026-04 查证）
+这个模式不止出现在操作系统里。
 
-| 特性 | Workers Free | Workers Paid ($5/月) |
-|------|-------------|---------------------|
-| **Worker 数量** | 100 | 500 |
-| **CPU Time / 请求** | 10 ms | 5 min（默认 30s，可调） |
-| **请求量** | 100,000/天 | 无限制 |
-| **Subrequests / 请求** | 50 | 10,000 |
-| **内存** | 128 MB | 128 MB |
-| **Worker 包大小** | 3 MB | 10 MB |
-| **Cron Triggers** | 5 | 250 |
+## 同构问题，三个领域
 
-!!! note "Workers for Platforms"
-    如果需要突破 500 Worker 上限，CF 提供了 [Workers for Platforms](https://developers.cloudflare.com/cloudflare-for-platforms/workers-for-platforms/) 产品，专为多租户场景设计，支持**无限数量**的用户 Worker、自定义限额、可观测性和标签管理。这是 Uncaged 长期演进的候选方案。
+2026-04-02，主人在讨论 Uncaged 架构时，从 OS 的 **LRU 内存换页**出发，发现了一个跨领域的统一结构：
 
-## 统一模型
-
-```
-┌─────────────┐
-│  能力池      │  无限：KV 里的代码 / 所有可用工具
-│  (磁盘/冷存) │
-└──────┬──────┘
-       │ 按需加载 (page in)
-       ▼
-┌─────────────┐
-│  活跃槽位    │  有限：100~500 Worker / Context Window
-│  (内存/热区) │
-└──────┬──────┘
-       │ LRU 淘汰 (page out)
-       ▼
-┌─────────────┐
-│  回收        │  释放槽位给更需要的能力
-└─────────────┘
-```
+!!! info "核心洞察"
+    **OS 内存换页、AI Agent 工具管理、Cloudflare Worker 配额——是同一个问题的三个实例。**  
+    结构相同：有限槽位 + 无限能力池 → 需要动态调度。
 
 ### 对照表
 
-| 维度 | AI Agent 工具上下文 | Uncaged Workers |
-|------|-------------------|-----------------|
-| **槽位限制** | Context Window (token 数) | 100~500 Worker 配额 |
-| **能力池** | 所有可用工具 / 技能 | KV 里所有 Worker 源码 |
-| **瓶颈表现** | Token 太多 → 模型注意力下降 | 配额用完 → 无法部署新服务 |
-| **调度策略** | 按语义相关性加载工具 | 按访问频率 LRU 换页 |
-| **索引机制** | 工具描述 / 语义匹配 | 路由表 / 访问计数器 |
+| 维度 | OS 内存管理 | AI Agent 工具上下文 | Uncaged Workers |
+|------|------------|-------------------|-----------------|
+| **槽位** | 物理内存页框 | Context Window（token 数） | Worker 配额（Free 100 / Paid 500） |
+| **能力池** | 磁盘上的全部页面 | 所有可用工具 / 技能 | KV 里所有 Worker 源码 |
+| **瓶颈** | 内存不够 → 颠簸 | Token 太多 → 模型注意力下降 | 配额用完 → 无法部署新服务 |
+| **调度** | LRU / Clock 算法 | 按语义相关性加载 | LRU 按访问频率换页 |
+| **索引** | 页表 | 工具描述 / 语义匹配 | 路由表 / 访问计数器 |
+| **换入** | 磁盘 → 内存 | 读 SKILL.md → 注入 context | KV 拉代码 → 部署 Worker |
+| **换出** | 内存 → 磁盘 | 从 context 移除 | 删除 Worker，代码留在 KV |
 
-## OpenClaw Skills：已有的两级页表
+三个领域的解法也是同构的：**轻量索引常驻 + 完整内容按需加载 + 不活跃资源回收**。
 
-[OpenClaw](https://github.com/openclaw/openclaw) 的 Skills 机制天然实现了这个模式：
+## Agent 工具上下文：按需加载
 
-- **L1 页表（常驻）**：每个 Skill 的 `<description>` 标签，轻量，始终在 Context 里
-- **L2 页面（按需加载）**：`SKILL.md` 完整内容，只在匹配到时才 `read` 进来
+AI Agent 的 Context Window 是一种稀缺资源。把所有工具的完整描述塞进去，token 膨胀，模型注意力被稀释，推理质量下降。这和物理内存塞满后的"颠簸"（thrashing）如出一辙。
+
+解法不是扩大 context（就像加内存总有上限），而是**按需加载**：
+
+- 只保留轻量索引（工具名 + 一句话描述）
+- 收到请求时，根据语义匹配加载相关工具的完整 schema
+- 用完后从 context 释放
+
+### OpenClaw Skills：天然的两级页表
+
+[OpenClaw](https://github.com/openclaw/openclaw) 的 Skills 机制就是这个模式的实现：
 
 ```
 Agent 收到请求
-  → 扫描所有 Skill 描述（L1，常驻）
+  → 扫描所有 Skill 描述（L1 页表，常驻 context）
   → 匹配到最相关的 Skill
-  → read SKILL.md（L2，按需加载）
+  → read SKILL.md（L2 页面，按需加载）
   → 执行
+  → SKILL.md 内容在后续对话中自然衰减
 ```
 
-这就是**两级页表**——用极小的索引成本覆盖大量能力，只在需要时付出完整加载的代价。
+- **L1（页表条目）**：每个 Skill 的 `<description>` 标签，几十个 token，始终在 system prompt
+- **L2（页面内容）**：`SKILL.md` 完整文件，可能上千 token，只在匹配时加载
 
-## Uncaged 分层架构
+用极小的索引成本覆盖大量能力，只在需要时付出完整加载的代价。这就是两级页表。
 
-将同样的思路应用到 Uncaged，Worker 分为两层：**内核态**和**用户态**。
+## Uncaged Workers：三级缓存架构
 
-### 内核态 — 系统 Worker（常驻部署）
+将同样的思路应用到 Uncaged 的 Cloudflare Workers 平台。Worker 配额是物理限制（付费版 500 个），而用户可能创建的能力数量没有上限。
 
-类比操作系统的内核进程，这些 Worker 是平台本身运行的基础设施，始终在线：
+### L1 — 热 Worker（独立部署，常驻）
 
-| 系统 Worker | 职责 | 类比 |
-|------------|------|------|
-| **forge-router** | 路由分发、LRU 调度器 | 内核调度器 |
-| **worker-crud** | Worker 的创建/部署/删除 API | 进程管理 (fork/exec/kill) |
-| **auth-gateway** | 鉴权、密钥验证、访问控制 | 安全子系统 |
-| **health-check** | 状态页、心跳检测 | watchdog |
-| **kv-manager** | KV 代码仓库管理 | 文件系统 |
+核心高频服务，独立部署为 Worker，**永不换出**。类似 OS 内核进程常驻内存。
 
-这些对应 Agent 架构中的 **Skill 注册表**——不是具体能力，而是让能力能被发现和调度的基础设施。
+| Worker | 职责 | 类比 |
+|--------|------|------|
+| **Uncaged 主 Worker** | 路由分发、鉴权、LRU 调度 | 内核 |
+| **oc-status** | 心跳状态页 | watchdog |
 
-### 用户态 — 业务 Worker（LRU 换页）
+这些是平台基础设施，占用极少配额（< 10 个），但保证核心功能始终可用。
 
-实际的业务功能 Worker，通过 LRU 策略动态管理：
+### L2 — 冷代码（KV 存储，按需加载）
 
-- 全部源码存在 KV（相当于磁盘）
-- 收到请求时，如果目标 Worker 未部署：
-    1. 从 KV 读取源码
-    2. 通过 CF API 部署 Worker
-    3. 配额满时，淘汰最久未访问的 Worker（LRU page out）
-- 冷启动延迟 1-3 秒（CF API 部署时间）
+全部用户能力的源码存储在 KV 中。不占 Worker 配额，只占存储空间（KV 几乎无限）。
+
+当请求到达时：
 
 ```
-请求 → forge-router（内核态）
-  → 查路由表
-  → 已部署？→ 直接转发（命中）
-  → 未部署？→ worker-crud 从 KV 拉代码 → 部署 → 转发（换入）
-  → 配额满？→ LRU 淘汰最冷用户 Worker → 再部署（换页）
+请求 → Uncaged 主 Worker
+  → 查路由表（内存中，O(1)）
+  → 能力已加载？→ 直接执行（L1 命中）
+  → 未加载？→ 从 KV 拉代码 → 实例化执行（L2 加载）
+  → 配额/内存压力？→ LRU 淘汰最冷能力（换页）
 ```
 
-### 配额分配策略
+### 路由表 — 常驻 Uncaged 主 Worker 内
 
-以付费版 500 Worker 为例：
+轻量映射，记录每个能力的：
 
-| 层级 | 分配 | 用途 |
-|------|------|------|
-| 内核态 | ~10 个 | 系统基础设施，永不换出 |
-| 用户态热区 | ~490 个 | 业务 Worker，LRU 管理 |
-| KV 冷存 | 无限 | 全部 Worker 源码备份 |
+- 名称 / 标签 / schema
+- 最近访问时间（LRU 排序依据）
+- 代码在 KV 中的 key
+- 当前是否已加载
+
+路由表本身很小（每条几百字节），全部能力的索引可以常驻内存，不需要换页。这是 L1 页表的等价物。
+
+### 架构图
+
+```
+┌──────────────────────────────────────────┐
+│              L1 — 热 Worker               │
+│  Uncaged 主 Worker（路由 + 调度 + 执行）    │
+│  oc-status, ...                           │
+│  ┌──────────────────────────────────┐     │
+│  │ 路由表（常驻内存）                  │     │
+│  │ name → { kv_key, schema, lru_ts }│     │
+│  └──────────────────────────────────┘     │
+├──────────────────────────────────────────┤
+│              L2 — 冷代码                  │
+│  KV Store: 全部能力源码                    │
+│  容量无限，按需拉取到 L1 执行              │
+└──────────────────────────────────────────┘
+```
+
+!!! note "Dynamic Workers (worker_loaders)"
+    Uncaged 当前采用 Cloudflare 的 **Dynamic Workers** 机制（`worker_loaders` binding），在主 Worker 内部按需加载用户代码。这避免了为每个能力部署独立 Worker 消耗配额的问题，同时保持了沙箱隔离。
 
 ## 关键约束
 
 | 约束 | 影响 | 应对 |
 |------|------|------|
-| CF 禁止 `unsafe-eval` | 不能在 forge 内部 `eval()` KV 代码 | 必须通过 CF API 部署为独立 Worker |
-| Worker 数量上限 | Free 100 / Paid 500 | LRU 换页；长期考虑 Workers for Platforms |
-| CF API Rate Limit | 1000 req/min | 批量操作需节流；预热策略减少突发换页 |
-| 冷启动延迟 | CF API 部署 1-3 秒 | 内核态 Worker 覆盖关键路径；业务 Worker 预热 |
-| 免费版 CPU Time | 10ms / 请求 | 路由转发 < 1ms 足够；复杂逻辑用付费版（默认 30s，可调至 5min） |
+| **CF 禁止 `unsafe-eval`** | 不能在 Worker 内部 `eval()` 执行 KV 代码 | Dynamic Workers (`worker_loaders`) 提供安全的代码加载机制 |
+| **冷启动延迟** | 从 KV 加载代码有 1-3 秒延迟 | 高频能力预热；路由转发本身 < 1ms |
+| **CF API Rate Limit** | 1000 req/min | 批量操作节流；尽量通过 Dynamic Workers 内部调度减少 API 调用 |
+| **Worker 配额** | Free 100 / Paid 500 | 独立部署的 Worker 控制在个位数；用户能力通过 Dynamic Workers 加载不额外消耗配额 |
+
+> **数据来源**: [Cloudflare Workers Limits](https://developers.cloudflare.com/workers/platform/limits/)（2026-04 查证）
 
 ## 设计哲学
 
 **Uncaged = 能力虚拟化平台。**
 
-就像操作系统让每个进程以为自己拥有全部内存，Uncaged 让每个 Agent 以为自己拥有无限的 Worker。实际的物理限制通过智能调度变得透明。
+就像操作系统让每个进程以为自己拥有全部内存，Uncaged 让每个 Agent 以为自己拥有无限的能力。物理限制（Worker 配额、context window、内存页框）通过智能调度变得透明。
 
-这个思路不仅适用于 CF Workers，也是 AI Agent 工具管理的通用范式：
+这个哲学贯穿三个层面：
+
+1. **轻量索引，全局覆盖** — 用最小的常驻成本，让调度器知道所有能力的存在
+2. **按需加载，用时付费** — 只有被调用的能力才占用稀缺资源
+3. **LRU 回收，动态平衡** — 不活跃的能力自动释放，为新需求腾出空间
 
 !!! tip "核心原则"
     **不要试图把所有能力同时装进有限的槽位。用轻量索引覆盖全局，按需加载具体能力，LRU 回收不活跃的资源。**
+
+这不仅是 Uncaged 的设计哲学，也是 AI Agent 工具管理的通用范式。任何面对"有限槽位 + 无限能力"的系统，都可以从这个模型中获得启发。
 
 ## 相关链接
 
 - [Cloudflare Workers 文档](https://developers.cloudflare.com/workers/)
 - [Workers 配额限制](https://developers.cloudflare.com/workers/platform/limits/)
-- [Workers for Platforms](https://developers.cloudflare.com/cloudflare-for-platforms/workers-for-platforms/)（多租户/无限 Worker）
+- [Workers for Platforms](https://developers.cloudflare.com/cloudflare-for-platforms/workers-for-platforms/)
 - [OpenClaw](https://github.com/openclaw/openclaw)（Agent 框架，Skills 机制参考）
 - [ClawHub](https://clawhub.ai)（Skill 市场）
 
 ---
 
-*来源：2026-04-02 主人与小墨的架构讨论*
+*初版来源：2026-04-02 主人与小墨的架构讨论*  
+*重写：2026-04-08 小橘 🍊，根据 Uncaged 架构演进更新*
