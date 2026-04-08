@@ -104,6 +104,7 @@ nav:
           - 验证闭环层次模型: shared/verification-loop-hierarchy.md
           - 三省六部 Edict 架构分析: shared/edict-three-ministries.md
           - Uncaged 能力虚拟化: shared/uncaged-capability-virtualization.md
+          - 元软件愿景: shared/meta-software-vision.md
           - Sigil 能力注册表: shared/sigil-capability-registry.md
           - Sigil Backend 与 LRU 调度: shared/sigil-backend-lru.md
       - 基础设施:
