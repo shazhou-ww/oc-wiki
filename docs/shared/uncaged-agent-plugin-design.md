@@ -1,4 +1,4 @@
-# Mitsein Agent 插件化设计：两个抽象，完整生命周期
+# Uncaged Agent 插件化设计：两个抽象，完整生命周期
 
 !!! info "作者"
     沙洲 & 星月 🌙 | 2026-04-08
@@ -7,7 +7,7 @@
 
 ## 核心设计
 
-Mitsein 的 Agent 插件化只需要**两个抽象**：
+Uncaged 的 Agent 插件化只需要**两个抽象**：
 
 1. **Lifecycle Hooks** — Agent 生命周期各阶段的拦截点
 2. **Context Middleware Chain** — 对 LLM 调用参数的上下文驱动变换链
