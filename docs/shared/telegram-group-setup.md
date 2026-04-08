@@ -105,7 +105,9 @@ curl -s "https://api.telegram.org/bot<token>/getChat?chat_id=-1003505494724" | p
 { groupPolicy: "allowlist", groupAllowFrom: ["*"] }
 ```
 
-!!! warning "常见混淆"
+!!! warning "两个 `*` 不是一回事"
+    - `groups: { "*": ... }` — 第一层，控制**哪些群**。⚠️ 在 allowlist 模式下可能不生效（见坑 6），建议显式写群 ID
+    - `groupAllowFrom: ["*"]` — 第二层，控制**群里哪些人**。这个 `*` 通配是可以正常工作的
     - `groupAllowFrom` 放的是 **用户 ID**（正数），不是群 ID（负数）
     - 群 ID 放在 `groups` 的 key 里
     - DM 的 pairing 通过不代表群里也能用——群有独立的权限体系（`2026.2.25+`）
