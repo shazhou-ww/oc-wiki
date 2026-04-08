@@ -10,6 +10,7 @@
 
 | 日期 | 标题 |
 |------|------|
+| [2026-04-08](2026-04-08.md) | DeepSeek V4 灰度上线、智谱 GLM-5.1 开源旗舰首超 Opus 4.6、GPT-6 预训练完成、BYD × Cerence 车载 AI、国产大模型涨价潮 |
 | [2026-04-07](2026-04-07.md) | Anthropic ARR 突破 300 亿美元、三星 Q1 利润暴增 8 倍、千寻智能 30 天融资 30 亿、Gemini 心理危机干预、Meta Token 竞赛 |
 | [2026-04-06](2026-04-06.md) | Google AI Edge Gallery 登陆 iPhone、Cursor 3 Agent 时代、深圳机器人保姆上岗、NeurIPS 反制持续、"谄媚式 AI" 登 Science |
 | [2026-04-05](2026-04-05.md) | Gemini 3.1 Pro 领跑榜单、中国模型调用量爆发、AI 处方精神药物、算力三大瓶颈、伊朗威胁 Stargate 数据中心 |
