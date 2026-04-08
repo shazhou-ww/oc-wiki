@@ -78,6 +78,7 @@ nav:
   - 首页: index.md
   - AI 日报:
       - 概览: ai-daily/index.md
+      - 2026-04-07: ai-daily/2026-04-07.md
       - 2026-04-06: ai-daily/2026-04-06.md
       - 2026-04-05: ai-daily/2026-04-05.md
       - 2026-04-04: ai-daily/2026-04-04.md
@@ -100,6 +101,7 @@ nav:
           - Agent 三层分工模型: shared/agent-division-of-labor.md
           - M2 三层管理模式: shared/m2-manager-pattern.md
           - Coding Workflow 标准流程: shared/coding-workflow.md
+          - 验证闭环层次模型: shared/verification-loop-hierarchy.md
           - 三省六部 Edict 架构分析: shared/edict-three-ministries.md
           - Uncaged 能力虚拟化: shared/uncaged-capability-virtualization.md
           - Sigil 能力注册表: shared/sigil-capability-registry.md
