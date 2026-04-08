@@ -146,7 +146,7 @@ Agent 收到请求
 | 约束 | 影响 | 应对 |
 |------|------|------|
 | **CF 禁止 `unsafe-eval`** | 不能 `eval()` 执行 KV 代码 | Dynamic Workers (`worker_loaders`) 提供安全加载机制 |
-| **换页冷启动** | 从 KV 加载有 **1-3 秒**延迟 | 高频能力预热；路由转发本身 < 1ms |
+| **换页冷启动** | 从 KV 加载有延迟（Dynamic Workers 亚秒级；CF API 部署独立 Worker 1-3 秒） | 高频能力预热；路由转发本身 < 1ms |
 | **CF API Rate Limit** | **1000 req/min** | 批量操作节流；尽量通过 Dynamic Workers 内部调度减少 API 调用 |
 | **Worker 配额** | Free 100 / Paid **500** | 独立部署 Worker 控制个位数；用户能力走 Dynamic Workers 不额外消耗配额 |
 
