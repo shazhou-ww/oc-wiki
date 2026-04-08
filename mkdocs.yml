@@ -127,6 +127,7 @@ nav:
           - RAKU 代理故障排查: shared/raku-proxy-troubleshoot.md
       - Skill 推荐:
           - 需求分析 Skill: shared/skill-requirements-analysis.md
+      - Telegram 群聊配置踩坑: shared/telegram-group-setup.md
       - SORA Setup 指南: shared/sora-setup-guide.md
 
 extra:
