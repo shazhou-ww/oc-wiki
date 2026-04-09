@@ -10,6 +10,7 @@
 
 | 日期 | 标题 |
 |------|------|
+| [2026-04-09](2026-04-09.md) | LG EXAONE 4.5 视觉推理超 GPT-5 Mini、中兴 AI 生态大会全栈发布、Meta 坚持开源新模型、BBC 报道 AI 搜索颠覆 SEO、十部门 AI 伦理审查办法 |
 | [2026-04-08](2026-04-08.md) | DeepSeek V4 灰度上线、智谱 GLM-5.1 开源旗舰首超 Opus 4.6、GPT-6 预训练完成、BYD × Cerence 车载 AI、国产大模型涨价潮 |
 | [2026-04-07](2026-04-07.md) | Anthropic ARR 突破 300 亿美元、三星 Q1 利润暴增 8 倍、千寻智能 30 天融资 30 亿、Gemini 心理危机干预、Meta Token 竞赛 |
 | [2026-04-06](2026-04-06.md) | Google AI Edge Gallery 登陆 iPhone、Cursor 3 Agent 时代、深圳机器人保姆上岗、NeurIPS 反制持续、"谄媚式 AI" 登 Science |
