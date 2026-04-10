@@ -183,9 +183,9 @@ hooks/mempal_save_hook.sh
 
 ---
 
-## 与 OpenClaw/Mitsein 记忆系统的对比
+## 与 OpenClaw 记忆系统的对比
 
-| 维度 | MemPalace | OpenClaw Memory | 我们的 Memex |
+| 维度 | MemPalace | OpenClaw Memory | Memex (Zettelkasten) |
 |:--|:--|:--|:--|
 | **存储** | ChromaDB (向量) + SQLite (图谱) | MEMORY.md + memory/*.md (文件) | Zettelkasten 卡片 (Git) |
 | **检索** | 语义嵌入搜索 | 全文搜索 (FTS) | 全文搜索 + 标签 |
@@ -196,19 +196,19 @@ hooks/mempal_save_hook.sh
 | **Agent 集成** | MCP Server + Hooks | 原生（memory_search 工具） | memex CLI |
 | **分层加载** | 4 层（600-900 token 唤醒） | 全量加载 MEMORY.md | 搜索时按需 |
 
-### MemPalace 比我们好在哪
+### MemPalace 的优势
 
-1. **语义搜索** — ChromaDB 的嵌入向量搜索比纯文本 FTS 精准得多。"我们上次讨论数据库选型"这种模糊查询，语义搜索能找到，关键词搜索可能找不到。
-2. **分层加载** — 4 层栈设计精妙：身份和关键记忆常驻（~800 token），其他按需搜索。我们的 MEMORY.md 是全量加载，浪费 context。
-3. **知识图谱** — 实体关系 + 时间维度。我们的 memex 有双向链接但没有时间感知。
-4. **容量** — ChromaDB 可以存百万条记忆。我们的文件系统方案几千条就到头了。
+1. **语义搜索** — ChromaDB 的嵌入向量搜索比纯文本 FTS 精准得多
+2. **分层加载** — 4 层栈设计精妙，唤醒成本 <1000 token
+3. **知识图谱** — 实体关系 + 时间维度
+4. **容量** — ChromaDB 可存百万条记忆
 
-### 我们比 MemPalace 好在哪
+### OpenClaw/Memex 的优势
 
-1. **零依赖** — MEMORY.md 是纯文本，任何编辑器能看。MemPalace 需要 ChromaDB。
-2. **透明度** — 文件系统一目了然。ChromaDB 是黑箱，用户不知道里面存了什么。
-3. **可编辑** — 直接改文件。MemPalace 改数据得用 CLI 或 MCP 工具。
-4. **Git 友好** — 天然版本控制。ChromaDB 二进制文件不好 diff。
+1. **零依赖** — 纯文本，任何编辑器能看
+2. **透明度** — 文件系统一目了然
+3. **可编辑** — 直接改文件
+4. **Git 友好** — 天然版本控制
 
 ---
 
