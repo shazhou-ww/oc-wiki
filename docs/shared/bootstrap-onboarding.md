@@ -19,6 +19,27 @@
 
 ---
 
+## 支持平台
+
+| 系统 | 脚本 | 状态 |
+|:-----|:-----|:-----|
+| macOS (Intel + Apple Silicon) | `bootstrap-macos.sh` | ✅ |
+| Ubuntu 20.04+ / Debian 11+ | `bootstrap-ubuntu.sh` | ✅ |
+| Debian 系 (Pop!_OS, Mint, Kali, Raspbian) | `bootstrap-ubuntu.sh` | ✅ |
+| Windows (WSL2) | 通过 `bootstrap-ubuntu.sh` | ✅ |
+| 其他 Linux (Fedora, Arch 等) | — | ❌ 待补 |
+
+通用入口 `bootstrap.sh` 会自动检测系统并派发到对应脚本。
+
+!!! warning "协作前先问系统类型"
+    每次需要远程协助/bootstrap 新设备时，**先确认对方的操作系统**再给脚本链接：
+
+    - macOS → `bootstrap-macos.sh`
+    - Ubuntu/Debian/WSL → `bootstrap-ubuntu.sh`
+    - 不确定 → 用通用 `bootstrap.sh`（自动检测）
+
+---
+
 ## 流程图
 
 ```mermaid
