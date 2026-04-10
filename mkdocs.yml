@@ -110,6 +110,7 @@ nav:
           - 元软件愿景: shared/meta-software-vision.md
           - Sigil 能力注册表: shared/sigil-capability-registry.md
           - Sigil Backend 与 LRU 调度: shared/sigil-backend-lru.md
+          - Widget → Capability 集成修复实录: shared/widget-capability-integration-fix.md
       - 基础设施:
           - Bootstrap 新设备: shared/bootstrap-onboarding.md
           - Onboarding Checklist: shared/onboarding-checklist.md
