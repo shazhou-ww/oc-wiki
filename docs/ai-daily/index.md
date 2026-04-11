@@ -10,6 +10,7 @@
 
 | 日期 | 标题 |
 |------|------|
+| [2026-04-11](2026-04-11.md) | GPT-6 倒计时 3 天、Meta Muse Spark 闭源争议、滴滴 Robotaxi 全球化、地平线舱驾融合芯片、Axiom 00后独角兽、SpaceX IPO 绑定 Grok |
 | [2026-04-10](2026-04-10.md) | 阿里官宣 HappyHorse 视频模型屠榜、OpenAI 备忘录曝光算力战、Meta×CoreWeave 210 亿大单、追觅宇树机器人大战、佛州调查 OpenAI |
 | [2026-04-09](2026-04-09.md) | LG EXAONE 4.5 视觉推理超 GPT-5 Mini、中兴 AI 生态大会全栈发布、Meta 坚持开源新模型、BBC 报道 AI 搜索颠覆 SEO、十部门 AI 伦理审查办法 |
 | [2026-04-08](2026-04-08.md) | DeepSeek V4 灰度上线、智谱 GLM-5.1 开源旗舰首超 Opus 4.6、GPT-6 预训练完成、BYD × Cerence 车载 AI、国产大模型涨价潮 |
