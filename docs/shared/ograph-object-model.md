@@ -175,8 +175,10 @@ event_refs (
 projections (
   def_hash TEXT,
   params_hash TEXT,
-  value TEXT, -- JSON
-  updated_at INTEGER,
+  params TEXT,        -- JSON: 原始参数
+  value TEXT,         -- JSON: 计算结果
+  created_at INTEGER, -- 首次计算时间
+  updated_at INTEGER, -- 最近更新时间
   PRIMARY KEY (def_hash, params_hash)
 )
 ```
@@ -206,10 +208,11 @@ projections (
 **数据表：**
 ```sql
 reactions (
-  id TEXT PRIMARY KEY,
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
   projection_def_hash TEXT,
   params_hash TEXT,
-  action TEXT, -- 'webhook' | 'emit_event'
+  params TEXT,        -- JSON: 原始参数
+  action TEXT,        -- 'webhook' | 'emit_event'
   webhook_url TEXT,
   emit_event_type TEXT,
   emit_payload_template TEXT, -- JSONata
