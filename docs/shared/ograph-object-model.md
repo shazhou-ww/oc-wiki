@@ -119,27 +119,24 @@ projection_def_names (
 
 ### 3.1 Object
 
-纯标识实体，`id + type + created_at`，可选 `external_id` 供外部系统引用。
+纯标识实体，`id + type + created_at`。
 
 **数据表：**
 ```sql
 objects (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   type TEXT NOT NULL, -- → object_defs.name
-  external_id TEXT,   -- 可选，外部系统的可读标识（如 GitHub issue number）
   created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
 );
-CREATE UNIQUE INDEX idx_objects_ext ON objects(external_id) WHERE external_id IS NOT NULL;
 ```
 
 **ID 策略：**
 - 内部 ID 使用 `INTEGER AUTOINCREMENT`，简单高效
-- `external_id` 可选，用于存储外部系统标识（GitHub issue、Gitee issue 等），便于 Adapter 层（#211）双向映射
-- `GET /objects/:id` 先查 `external_id`，再查 `id`，两种方式都可定位
+- 外部系统标识（GitHub issue number 等）不放在 Object 表上，而是通过事件 payload 记录（如 `external_id_linked` 事件），由 Adapter 层自行管理映射
 
 **API：**
-- `POST /objects { type, external_id? }` — 创建 Object 实例
-- `GET /objects/:id` — 查询 Object（支持 integer id 或 external_id）
+- `POST /objects { type }` — 创建 Object 实例
+- `GET /objects/:id` — 查询 Object
 - `GET /objects?type=<name>` — 按类型列出 Objects
 
 ### 3.2 Event
@@ -355,7 +352,7 @@ SELECT projection_hash FROM projection_def_sources WHERE event_def_hash = ?
 
 | 实体 | ID 类型 | 理由 |
 |---|---|---|
-| Object | INTEGER AUTOINCREMENT | 内部标识足够，外部引用走 `external_id` |
+| Object | INTEGER AUTOINCREMENT | 内部标识足够，外部引用通过事件 payload 记录 |
 | Event | INTEGER AUTOINCREMENT | 严格递增，做增量边界，天然全序 |
 | Reaction | INTEGER AUTOINCREMENT | 纯内部实体 |
 | Def versions | content hash (TEXT) | 内容寻址，版本链语义需要 |
