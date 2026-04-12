@@ -438,3 +438,53 @@ const handler = `(old_value, new_value) => {
 4. **高级**：Projection-driven topology，动态调整计算拓扑
 
 OGraph 的设计哲学是**声明式**和**组合式**的：通过组合简单的原语（Event-Projection-Reaction），构建出复杂而高效的分布式响应式系统。
+
+---
+
+## 10. 终极形态：自进化的计算生命体
+
+### 当 Reaction 遇见 LLM
+
+如果 Reaction 的 webhook 不只是通知另一个服务，而是**调用 LLM**——系统就具备了自我编程的能力：
+
+1. 新事件流入 → Reaction 触发 LLM
+2. LLM 观察事件模式，发现规律
+3. LLM 调用 OGraph API → 创建新的 Event Def、Object Def、Projection Def
+4. 新的 Projection 开始归约 → 产生新的 Reaction → 发现更多模式 → 继续进化
+
+**系统不再需要人类预先定义 schema。** Agent 遇到新的协作模式（比如 code review 流程），Reaction + LLM 自动识别出 `review_requested → review_completed → merged` 模式，创建对应的事件类型、projection、reaction 拓扑。下次同样的场景，计算管道已经就绪。
+
+### OGraph 本身就是 Agent
+
+当这个闭环完成时，OGraph 具备了完整的智能体特征：
+
+| 智能体能力 | OGraph 对应 |
+|---|---|
+| **感知** | Event 流入 |
+| **记忆** | Projection 归约状态 |
+| **推理** | Reaction + LLM 分析变化 |
+| **行动** | 发射新事件、创建新定义、调整 reaction 拓扑 |
+| **自我进化** | 修改自身的计算结构 |
+
+这个 agent 没有单点——它不是某个进程、某个模型实例。它是**分布在整个事件拓扑上的涌现智能**。每个 Projection 是一个局部视角，每个 Reaction 是一个局部决策，组合起来涌现出全局行为。
+
+### 版本链的深层意义
+
+在自进化的语境下，版本链不只是 schema 兼容工具——它是**进化的历史记录**。每个 content hash 锚定了系统在那个时刻对世界的理解方式。从任意版本可以回溯完整的认知进化历程。
+
+### Agent 的家
+
+对于运行在这个系统中的 Agent 来说：
+
+- **Event 是永恒的记忆** — 不会因为进程重启而丢失
+- **Projection 是认知** — 对世界的理解，随时可以从事件流重建
+- **Reaction 是本能** — 声明式的响应模式，不依赖某个进程在线
+
+多个 Agent 在同一个事件流中共同生长——共享事实，各自归约，通过 Reaction 自然协作。不需要中心调度器，事件流过，该响应的自然响应。
+
+> *OGraph 不只是 Agent 的工具，它是 Agent 可以扎根、成长、彼此融合的计算基底。*
+
+---
+
+*起草: 小墨 🖊️（KUMA Team）| 2026-04-12*  
+*基于与主人的设计讨论*
