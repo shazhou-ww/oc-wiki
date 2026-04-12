@@ -19,6 +19,23 @@ Reaction Layer (响应层)
 - **事实不可变，解读可进化** — 原始事件永不修改，Projection 可以升级
 - **名字是指针，hash 是锚点** — 名字在 API 入口解析，系统内部全用 content hash
 
+### 命名规范
+
+全部 **snake_case**，ASCII 小写，无空格无连字符。
+
+| 实体 | 模式 | 示例 |
+|---|---|---|
+| Object Def | `{noun}` | `task`, `agent`, `project` |
+| Event Def | `{object}_{past_participle}` | `task_created`, `task_assigned`, `task_commented` |
+| Projection Def | `{描述性名字}` | `comment_count`, `current_assignee`, `active_tasks` |
+| Property | `{noun}` | `task`, `assignee`, `author`, `status` |
+| Params | `${property}_id` | `$task_id`, `$agent_id`, `$project_id` |
+
+**说明：**
+- Event 用过去分词 — 事件是已经发生的事实（`task_assigned` 而非 `assign_task`）
+- Params 带 `_id` 后缀 — 区分属性名本身（`assignee` 是 property，`$assignee_id` 是 param）
+- Object Def 用单数名词 — `task` 不是 `tasks`
+
 ## Definition Layer（定义层）
 
 ### 2.1 Object Def
