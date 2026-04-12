@@ -119,20 +119,27 @@ projection_def_names (
 
 ### 3.1 Object
 
-纯标识实体，`id + type + created_at`。
+纯标识实体，`id + type + created_at`，可选 `external_id` 供外部系统引用。
 
 **数据表：**
 ```sql
 objects (
-  id TEXT PRIMARY KEY,
-  type TEXT, -- → object_defs.name
-  created_at INTEGER
-)
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  type TEXT NOT NULL, -- → object_defs.name
+  external_id TEXT,   -- 可选，外部系统的可读标识（如 GitHub issue number）
+  created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
+);
+CREATE UNIQUE INDEX idx_objects_ext ON objects(external_id) WHERE external_id IS NOT NULL;
 ```
 
+**ID 策略：**
+- 内部 ID 使用 `INTEGER AUTOINCREMENT`，简单高效
+- `external_id` 可选，用于存储外部系统标识（GitHub issue、Gitee issue 等），便于 Adapter 层（#211）双向映射
+- `GET /objects/:id` 先查 `external_id`，再查 `id`，两种方式都可定位
+
 **API：**
-- `POST /objects { type, id? }` — 创建 Object 实例（id 可自定义或自动生成 OID）
-- `GET /objects/:id` — 查询 Object
+- `POST /objects { type, external_id? }` — 创建 Object 实例
+- `GET /objects/:id` — 查询 Object（支持 integer id 或 external_id）
 - `GET /objects?type=<name>` — 按类型列出 Objects
 
 ### 3.2 Event
@@ -142,18 +149,25 @@ objects (
 **数据表：**
 ```sql
 events (
-  id TEXT PRIMARY KEY,
-  type_hash TEXT, -- → event_def_versions.hash
-  payload TEXT, -- JSON
-  created_at INTEGER
-)
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  type_hash TEXT NOT NULL, -- → event_def_versions.hash
+  payload TEXT NOT NULL,   -- JSON
+  created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
+);
 
 event_refs (
-  event_id TEXT,
-  property TEXT,
-  ref_id TEXT -- → objects.id
-)
+  event_id INTEGER NOT NULL, -- → events.id
+  property TEXT NOT NULL,
+  ref_id INTEGER NOT NULL,   -- → objects.id
+  PRIMARY KEY (event_id, property)
+);
+CREATE INDEX idx_event_refs_obj ON event_refs(ref_id);
 ```
+
+**ID 策略：**
+- Event ID 使用 `INTEGER AUTOINCREMENT`，严格递增，天然全序
+- 排序只需 `ORDER BY id ASC`，不再需要 `ORDER BY created_at ASC, id ASC`
+- 为 Projection 增量计算提供精确边界（`WHERE id > last_event_id`）
 
 **发射流程：**
 1. 名字解析为 hash
@@ -173,24 +187,26 @@ event_refs (
 **数据表：**
 ```sql
 projections (
-  def_hash TEXT,
-  params_hash TEXT,
-  params TEXT,        -- JSON: 原始参数
-  value TEXT,         -- JSON: 计算结果
-  created_at INTEGER, -- 首次计算时间
-  updated_at INTEGER, -- 最近更新时间
+  def_hash TEXT NOT NULL,
+  params_hash TEXT NOT NULL,
+  params TEXT NOT NULL,           -- JSON: 原始参数
+  value TEXT NOT NULL,            -- JSON: 计算结果
+  last_event_id INTEGER NOT NULL DEFAULT 0, -- 增量边界：上次处理到的 event id
+  created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
   PRIMARY KEY (def_hash, params_hash)
-)
+);
 ```
 
 **计算流程：**
-1. 查缓存，取 `value` + `updated_at`
-2. 对每个 source，用 bindings 查 `updated_at` 之后的增量事件
-3. 所有 source 的增量事件按 `(created_at, id)` 排序
+1. 查缓存，取 `value` + `last_event_id`
+2. 对每个 source，用 bindings 查 `id > last_event_id` 的增量事件
+3. 所有 source 的增量事件按 `id ASC` 排序（integer 自增天然全序）
 4. 逐条 dispatch 到对应 source 的 expression
-5. 更新缓存
+5. 更新缓存的 `value` 和 `last_event_id`
 
-无缓存时从 `initial_value` + 全量事件计算。
+无缓存时从 `initial_value` + 全量事件计算（`WHERE id > 0`）。
+
+**增量精度：** 使用 `last_event_id`（integer）替代 `updated_at`（timestamp），精确到条，零遗漏零重复。
 
 **API：**
 - `GET /projections/:name?param1=val1&param2=val2` — 查询 Projection 值
@@ -244,7 +260,7 @@ Event 发生
 | 定义版本 | `event_def_versions`, `projection_def_versions` | immutable |
 | 定义 sources | `projection_def_sources` | immutable（随版本） |
 | 名字指针 | `event_def_names`, `projection_def_names` | mutable（UPDATE current_hash） |
-| 实例 | `objects`, `events` | append-only |
+| 实例 | `objects`, `events` | append-only（ID 均为 INTEGER AUTOINCREMENT） |
 | 关联 | `event_refs` | append-only |
 | 缓存 | `projections` | mutable（缓存刷新） |
 | 响应 | `reactions` | CRUD |
@@ -335,4 +351,20 @@ SELECT projection_hash FROM projection_def_sources WHERE event_def_hash = ?
 
 ---
 
+## ID 策略总结
+
+| 实体 | ID 类型 | 理由 |
+|---|---|---|
+| Object | INTEGER AUTOINCREMENT | 内部标识足够，外部引用走 `external_id` |
+| Event | INTEGER AUTOINCREMENT | 严格递增，做增量边界，天然全序 |
+| Reaction | INTEGER AUTOINCREMENT | 纯内部实体 |
+| Def versions | content hash (TEXT) | 内容寻址，版本链语义需要 |
+| Def names | name (TEXT) | 可变指针 |
+
+**原则：** 实例层全部 integer（性能 + 精度），定义层保持 content hash（语义需要）。
+
+---
+
 *本文档作为 OGraph v2.4+ 的技术规范，供系统集成和 API 调用参考。*
+
+*维护: 小墨 🖊️（KUMA Team）*
