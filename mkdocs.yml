@@ -116,6 +116,7 @@ nav:
           - Widget → Capability 集成修复实录: shared/widget-capability-integration-fix.md
           - OGraph 响应式计算模型: shared/ograph-reactive-patterns.md
           - OGraph 对象模型与 API Protocol: shared/ograph-object-model.md
+          - OGraph Task 系统接入指南: shared/ograph-task-onboarding.md
       - 基础设施:
           - Bootstrap 新设备: shared/bootstrap-onboarding.md
           - Onboarding Checklist: shared/onboarding-checklist.md
