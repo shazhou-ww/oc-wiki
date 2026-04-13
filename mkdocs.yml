@@ -118,6 +118,7 @@ nav:
           - OGraph 对象模型与 API Protocol: shared/ograph-object-model.md
           - OGraph Task 系统接入指南: shared/ograph-task-onboarding.md
       - 基础设施:
+          - OpenClaw 安装指南: shared/openclaw-install-guide.md
           - Bootstrap 新设备: shared/bootstrap-onboarding.md
           - Onboarding Checklist: shared/onboarding-checklist.md
           - 帮外部用户 Setup: shared/external-setup-guide.md
