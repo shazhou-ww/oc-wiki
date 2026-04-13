@@ -1,6 +1,6 @@
 # OGraph Task 集成安装指南
 
-> 在 OpenClaw 上安装 OGraph Plugin + Dispatcher，让你的 Agent 自动接收和处理任务。
+> 两条命令安装，五分钟跑通。让你的 Agent 自动接收和处理任务。
 
 ---
 
@@ -17,10 +17,10 @@ graph LR
 
 你需要安装两个组件：
 
-| 组件 | 作用 | 运行方式 |
-|------|------|---------|
-| **OGraph Plugin** | 接收 Dispatcher 推送，管理 agent session | OpenClaw 插件，随 Gateway 启动 |
-| **Dispatcher** | 轮询 OGraph 事件流，发现新任务推给 Plugin | 独立 Node.js 进程 |
+| 组件 | npm 包 | 作用 |
+|------|--------|------|
+| **OGraph Plugin** | `@uncaged/openclaw-plugin-ograph` | 接收推送，管理 agent session |
+| **Dispatcher** | `@uncaged/ograph-dispatcher` | 轮询事件流，推给 Plugin |
 
 ---
 
@@ -28,7 +28,6 @@ graph LR
 
 - [x] OpenClaw 已安装并运行（参考 [OpenClaw 安装指南](openclaw-install-guide.md)）
 - [x] Node.js v20+
-- [x] Git
 - [x] 你的 OGraph Agent ID（没有的话下面会创建）
 
 ---
@@ -84,17 +83,17 @@ curl -s -X POST https://ograph.shazhou.workers.dev/events \
 
 ## Step 2：安装 OGraph Plugin
 
-### 2.1 克隆 Plugin 仓库
+### 2.1 安装
 
 ```bash
-cd ~/repos  # 或你喜欢的目录
-git clone https://github.com/oc-xiaoju/openclaw-plugin-ograph.git
-cd openclaw-plugin-ograph
-npm install --ignore-scripts && npm run build
+npm install -g @uncaged/openclaw-plugin-ograph
 ```
 
-!!! warning "npm install 报 EPERM?"
-    如果遇到 `EPERM: operation not permitted, chmod openclaw.mjs`，是因为全局安装的 OpenClaw 文件权限问题。加 `--ignore-scripts` 跳过 postinstall 即可。
+查看安装路径（后面配置要用）：
+
+```bash
+echo $(npm root -g)/@uncaged/openclaw-plugin-ograph
+```
 
 ### 2.2 注册到 OpenClaw
 
@@ -108,14 +107,14 @@ npm install --ignore-scripts && npm run build
     ],
     "load": {
       "paths": [
-        "/absolute/path/to/openclaw-plugin-ograph"
+        "/usr/lib/node_modules/@uncaged/openclaw-plugin-ograph"
       ]
     },
     "entries": {
       "ograph": {
         "enabled": true,
         "config": {
-          "secret": "your-gateway-token-here",
+          "secret": "<YOUR_GATEWAY_TOKEN>",
           "topics": {
             "task-execution": {
               "description": "任务执行管理",
@@ -131,20 +130,22 @@ npm install --ignore-scripts && npm run build
 ```
 
 !!! warning "路径必须是绝对路径"
-    `load.paths` 里填 clone 目录的**绝对路径**，不能用 `~`。
-
-!!! important "secret 字段说明"
-    `config.secret` 字段应填入你的 **OpenClaw Gateway Token**（不是自定义密钥）。
+    `load.paths` 里填 npm 全局安装的**绝对路径**，不能用 `~`。
     
-    获取方法：在 `~/.openclaw/openclaw.json` 中找到 `gateway.auth.token` 的值，复制过来。
-    
-    ```json
-    "gateway": {
-      "auth": {
-        "token": "gw_abcd1234..."  // ← 这个值
-      }
-    }
+    用 `npm root -g` 查看你的全局路径：
+    ```bash
+    echo $(npm root -g)/@uncaged/openclaw-plugin-ograph
     ```
+
+!!! important "secret = Gateway Token"
+    `config.secret` 必须填你的 **OpenClaw Gateway Token**（不是自定义密码）。
+    
+    查看你的 Gateway Token：
+    ```bash
+    cat ~/.openclaw/openclaw.json | grep -A2 '"auth"'
+    ```
+    
+    找到 `gateway.auth.token` 的值，填到这里。Dispatcher 的 `agents[].secret` 也要填同一个值。
 
 ### 2.3 重启 Gateway
 
@@ -155,28 +156,21 @@ openclaw gateway restart
 验证 Plugin 加载成功：
 
 ```bash
-# 应该返回 401（unauthorized），说明端点存在
 curl -s -X POST http://localhost:18789/plugins/ograph/dispatch \
   -H "Content-Type: application/json" -d '{}'
 ```
 
-```json
-{"error": {"message": "Unauthorized", "type": "unauthorized"}}
-```
-
-看到 `Unauthorized` 就对了（没有传 secret）。如果返回 404 说明 Plugin 没加载成功，检查路径和 `allow` 列表。
+返回 `{"error":{"message":"Unauthorized"}}` 就对了 ✅（端点存在，鉴权正常）。
+返回 404 说明 Plugin 没加载成功，检查路径和 `allow` 列表。
 
 ---
 
 ## Step 3：安装 Dispatcher
 
-### 3.1 克隆并构建
+### 3.1 安装
 
 ```bash
-cd ~/repos
-git clone https://github.com/oc-xiaoju/ograph.git
-cd ograph/packages/dispatcher
-npm install && npm run build
+npm install -g @uncaged/ograph-dispatcher
 ```
 
 ### 3.2 创建配置文件
@@ -208,7 +202,7 @@ mkdir -p ~/.config/ograph
     {
       "type": "oc-plugin",
       "url": "http://localhost:18789/plugins/ograph/dispatch",
-      "secret": "your-gateway-token-here",
+      "secret": "<YOUR_GATEWAY_TOKEN>",
       "actor": "task-execution"
     }
   ],
@@ -222,37 +216,34 @@ mkdir -p ~/.config/ograph
 }
 ```
 
-**关键配置说明：**
+**关键配置：**
 
 | 字段 | 说明 |
 |------|------|
 | `discovery.agentId` | 你的 OGraph Agent ID |
 | `discovery.eventTypes` | 监听的事件类型 |
-| `agents[].secret` | **必须与 OpenClaw Gateway Token 一致**（即 `~/.openclaw/openclaw.json` 中的 `gateway.auth.token` 值） |
-| `agents[].actor` | 对应 Plugin 的 `topics` 里的 key |
-| `intervals.watcherIdle` | 无变化时的 poll 间隔（ms） |
-| `intervals.watcherActive` | 有变化时的 poll 间隔（ms） |
+| `agents[].secret` | **必须与 Step 2 的 `config.secret` 一致**（即 Gateway Token） |
+| `agents[].actor` | 对应 Plugin `topics` 里的 key |
 
 ### 3.3 启动并验证
 
 ```bash
-cd ~/repos/ograph/packages/dispatcher
-npm start
+ograph-dispatcher
 ```
 
 !!! warning "代理环境下 fetch 失败？"
-    Node.js 原生 fetch **不读取** `HTTP_PROXY` / `HTTPS_PROXY` 环境变量。如果你的网络需要代理，需要用 undici ProxyAgent 手动注入：
+    Node.js 原生 fetch **不读取** `HTTP_PROXY` / `HTTPS_PROXY` 环境变量。如果你的网络需要代理，创建启动脚本：
     
     ```js
     // start-with-proxy.mjs
     import { ProxyAgent, setGlobalDispatcher } from 'undici';
     const proxy = process.env.HTTPS_PROXY || process.env.HTTP_PROXY;
     if (proxy) setGlobalDispatcher(new ProxyAgent(proxy));
-    await import('./dist/index.js');
+    await import('@uncaged/ograph-dispatcher');
     ```
     
     ```bash
-    node start-with-proxy.mjs  # 代替 npm start
+    node start-with-proxy.mjs  # 代替 ograph-dispatcher
     ```
 
 正常输出：
@@ -276,15 +267,16 @@ npm start
 Dispatcher 需要持续运行。用 systemd 管理：
 
 ```bash
-cat > ~/.config/systemd/user/ograph-dispatcher.service << 'EOF'
+DISPATCHER_BIN=$(which ograph-dispatcher)
+
+cat > ~/.config/systemd/user/ograph-dispatcher.service << EOF
 [Unit]
 Description=OGraph Dispatcher
 After=network-online.target
 
 [Service]
 Type=simple
-WorkingDirectory=%h/repos/ograph/packages/dispatcher
-ExecStart=/usr/bin/node dist/index.js
+ExecStart=$DISPATCHER_BIN
 Restart=on-failure
 RestartSec=10
 
@@ -346,15 +338,45 @@ curl -s -X POST "$API/events" \
 
 ---
 
+## 快速参考
+
+```bash
+# 一键安装
+npm install -g @uncaged/openclaw-plugin-ograph @uncaged/ograph-dispatcher
+
+# 查看 Plugin 路径
+echo $(npm root -g)/@uncaged/openclaw-plugin-ograph
+
+# 启动 Dispatcher
+ograph-dispatcher
+
+# 查看 Dispatcher 配置位置
+cat ~/.config/ograph/dispatcher.json
+```
+
+---
+
 ## 常见问题
 
 | 问题 | 原因 | 解决 |
 |------|------|------|
 | Plugin 返回 404 | Plugin 没加载 | 检查 `plugins.allow` 包含 `"ograph"` + `load.paths` 路径正确 |
-| Dispatcher 连不上 Plugin | gateway token 不匹配 | 确保 dispatcher.json `agents[].secret` 和 openclaw.json `gateway.auth.token` 一致 |
+| Dispatcher 连不上 Plugin | Gateway Token 不匹配 | 确保 dispatcher.json `agents[].secret` 和 openclaw.json `gateway.auth.token` 一致 |
 | Watcher 没发现事件 | agentId 不对 | 确认 `discovery.agentId` 是你的 OGraph Agent ID |
 | Agent 没响应 | session busy / topic 不匹配 | 检查 `agents[].actor` 对应 Plugin `topics` 的 key |
 | `agent #N = unknown` | 没发 profile 事件 | 回到 Step 1 发 `agent_profile_updated` 事件 |
+| npm install 报 EPERM | 全局 OC 权限问题 | 加 `--ignore-scripts`：`npm install -g --ignore-scripts @uncaged/openclaw-plugin-ograph` |
+| fetch 报 network error | 代理环境 | 见 Step 3.3 的代理说明 |
+
+---
+
+## 升级
+
+```bash
+npm update -g @uncaged/openclaw-plugin-ograph @uncaged/ograph-dispatcher
+openclaw gateway restart
+systemctl --user restart ograph-dispatcher
+```
 
 ---
 
