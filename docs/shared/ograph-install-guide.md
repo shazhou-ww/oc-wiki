@@ -90,8 +90,11 @@ curl -s -X POST https://ograph.shazhou.workers.dev/events \
 cd ~/repos  # 或你喜欢的目录
 git clone https://github.com/oc-xiaoju/openclaw-plugin-ograph.git
 cd openclaw-plugin-ograph
-npm install && npm run build
+npm install --ignore-scripts && npm run build
 ```
+
+!!! warning "npm install 报 EPERM?"
+    如果遇到 `EPERM: operation not permitted, chmod openclaw.mjs`，是因为全局安装的 OpenClaw 文件权限问题。加 `--ignore-scripts` 跳过 postinstall 即可。
 
 ### 2.2 注册到 OpenClaw
 
@@ -112,7 +115,7 @@ npm install && npm run build
       "ograph": {
         "enabled": true,
         "config": {
-          "secret": "<自定义一个密钥>",
+          "secret": "your-gateway-token-here",
           "topics": {
             "task-execution": {
               "description": "任务执行管理",
@@ -129,6 +132,19 @@ npm install && npm run build
 
 !!! warning "路径必须是绝对路径"
     `load.paths` 里填 clone 目录的**绝对路径**，不能用 `~`。
+
+!!! important "secret 字段说明"
+    `config.secret` 字段应填入你的 **OpenClaw Gateway Token**（不是自定义密钥）。
+    
+    获取方法：在 `~/.openclaw/openclaw.json` 中找到 `gateway.auth.token` 的值，复制过来。
+    
+    ```json
+    "gateway": {
+      "auth": {
+        "token": "gw_abcd1234..."  // ← 这个值
+      }
+    }
+    ```
 
 ### 2.3 重启 Gateway
 
@@ -192,7 +208,7 @@ mkdir -p ~/.config/ograph
     {
       "type": "oc-plugin",
       "url": "http://localhost:18789/plugins/ograph/dispatch",
-      "secret": "<与 Plugin config 里的 secret 一致>",
+      "secret": "your-gateway-token-here",
       "actor": "task-execution"
     }
   ],
@@ -212,7 +228,7 @@ mkdir -p ~/.config/ograph
 |------|------|
 | `discovery.agentId` | 你的 OGraph Agent ID |
 | `discovery.eventTypes` | 监听的事件类型 |
-| `agents[].secret` | **必须与 Plugin 的 `config.secret` 一致** |
+| `agents[].secret` | **必须与 OpenClaw Gateway Token 一致**（即 `~/.openclaw/openclaw.json` 中的 `gateway.auth.token` 值） |
 | `agents[].actor` | 对应 Plugin 的 `topics` 里的 key |
 | `intervals.watcherIdle` | 无变化时的 poll 间隔（ms） |
 | `intervals.watcherActive` | 有变化时的 poll 间隔（ms） |
@@ -223,6 +239,21 @@ mkdir -p ~/.config/ograph
 cd ~/repos/ograph/packages/dispatcher
 npm start
 ```
+
+!!! warning "代理环境下 fetch 失败？"
+    Node.js 原生 fetch **不读取** `HTTP_PROXY` / `HTTPS_PROXY` 环境变量。如果你的网络需要代理，需要用 undici ProxyAgent 手动注入：
+    
+    ```js
+    // start-with-proxy.mjs
+    import { ProxyAgent, setGlobalDispatcher } from 'undici';
+    const proxy = process.env.HTTPS_PROXY || process.env.HTTP_PROXY;
+    if (proxy) setGlobalDispatcher(new ProxyAgent(proxy));
+    await import('./dist/index.js');
+    ```
+    
+    ```bash
+    node start-with-proxy.mjs  # 代替 npm start
+    ```
 
 正常输出：
 
@@ -320,7 +351,7 @@ curl -s -X POST "$API/events" \
 | 问题 | 原因 | 解决 |
 |------|------|------|
 | Plugin 返回 404 | Plugin 没加载 | 检查 `plugins.allow` 包含 `"ograph"` + `load.paths` 路径正确 |
-| Dispatcher 连不上 Plugin | secret 不匹配 | 确保 dispatcher.json `agents[].secret` 和 openclaw.json `ograph.config.secret` 一致 |
+| Dispatcher 连不上 Plugin | gateway token 不匹配 | 确保 dispatcher.json `agents[].secret` 和 openclaw.json `gateway.auth.token` 一致 |
 | Watcher 没发现事件 | agentId 不对 | 确认 `discovery.agentId` 是你的 OGraph Agent ID |
 | Agent 没响应 | session busy / topic 不匹配 | 检查 `agents[].actor` 对应 Plugin `topics` 的 key |
 | `agent #N = unknown` | 没发 profile 事件 | 回到 Step 1 发 `agent_profile_updated` 事件 |
