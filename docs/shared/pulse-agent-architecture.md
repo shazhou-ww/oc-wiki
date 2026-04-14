@@ -40,7 +40,17 @@
 | **行动** | Reaction（handler 执行副作用） | Executors（Effect 落地） |
 | **记忆** | 事件流（永不消失） | pulse.db + snapshots/ |
 
-**OGraph 是阿赖耶识**——所有事件永不消失，是诸法的依托。Agent 在上面生起，又把新事件写回去，熏习阿赖耶识，不断进化。Pulse 是 Agent 的当下意识，OGraph 是 Agent 的深层记忆。
+| 佛教概念 | 对应 |
+|---|---|
+| **阿赖耶识** | Agent 的全部存储（OGraph + memory + pulse.db + skills + ...）|
+| **共业种子** | OGraph（多 Agent 共享的事件流）|
+| **别业种子** | memory/、pulse.db（各 Agent 私有）|
+| **现行** | Pulse 每次 tick（当下的感知-认知-行动）|
+| **熏习** | Agent emit 事件回写 OGraph，或更新 memory |
+
+OGraph 是**共业的记录**——多个 Agent 共同参与、共同见证的事实流，不是阿赖耶识本身。每个 Agent 自己的私有记忆（memory/、pulse.db）才对应各自的别业种子。两者合起来，加上 skills、config 等，才构成一个 Agent 完整的阿赖耶识。
+
+Pulse 是当下的**现行**，OGraph 是共业的积累，memory 是别业的沉淀。三者共同构成 Agent 的心识结构。
 
 ## 为什么这个洞察重要
 
