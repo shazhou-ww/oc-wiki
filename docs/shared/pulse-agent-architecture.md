@@ -1,0 +1,56 @@
+# Pulse = Agent 的最小运行时 — 感知·认知·行动
+
+> 我们从工程问题（Dispatcher 怎么管理）出发，一路推演，造出了一个 Agent 运行时的最小实现。
+
+## 感知-认知-行动回路
+
+```
+感知（Collectors）→ 认知（Rules）→ 行动（Executors）
+         ↑___________________________________|
+                     反馈回路
+```
+
+这跟经典 Agent 架构（Sense-Reason-Act）是同一个东西，但 Pulse 的版本更精确：
+
+| 层 | 组件 | 性质 |
+|---|---|---|
+| **感知** | Collectors | 分片、可插拔、失败降级 |
+| **认知** | Rules | S 组合子叠加，后者能看到前者输出，可组合 |
+| **行动** | Executors | 声明式（Effect 是数据，不是动作） |
+| **反馈** | Snapshot → OGraph → 下次 Snapshot | Moore 机，行动结果进入下次感知 |
+
+## 六处·六识·三行
+
+用佛教术语理解这个架构：
+
+- **六处（Collectors）** — 根与境的接触。眼耳鼻舌身意，对应 OGraph events、system stats、executor 状态……各自感知一个维度，不加判断，不互相干扰
+- **六识（Rules）** — 识依根生，缘境而起。看到 snapshot diff 就生起分别——"该产生什么 effect"。每条 Rule 是一种识，S 组合子叠加是识与识之间的相互影响
+- **三行（Executors）** — 身行、语行、意行。识生起后推动行为，把 effect 落地——dispatch 任务、exec 命令、notify Agent
+
+**Snapshot 是当下的六根触六境所生的境**——不是事件流（过去），而是此刻的状态。每次 tick 是一次完整的感知-认知-行动轮回，刹那生灭。
+
+## OGraph 与 Pulse 的统一
+
+两者是同一个 Agent 心智模型，运行在不同环境：
+
+| | OGraph（分布式事件流） | Pulse（本机进程） |
+|---|---|---|
+| **感知** | Event 进入系统 | Collectors 采集 Snapshot |
+| **认知** | Projection（缓存计算） | Rules（S 组合子） |
+| **行动** | Reaction（handler 执行副作用） | Executors（Effect 落地） |
+| **记忆** | 事件流（永不消失） | pulse.db + snapshots/ |
+
+**OGraph 是阿赖耶识**——所有事件永不消失，是诸法的依托。Agent 在上面生起，又把新事件写回去，熏习阿赖耶识，不断进化。Pulse 是 Agent 的当下意识，OGraph 是 Agent 的深层记忆。
+
+## 为什么这个洞察重要
+
+1. **Pulse 不只是 Dispatcher 的替代** — 它是 Agent 在本机的完整感知-认知-行动闭环
+2. **Rule 的设计是正确的** — `(prev, curr) → (effects, tickMs) → (effects', tickMs')` 正好对应认知的本质：看到变化，修饰行为
+3. **OGraph 的设计是正确的** — Event/Projection/Reaction 三层不是工程约定，是 Agent 认知结构的映射
+4. **未来演进方向清晰** — 当 Reaction 能调 LLM、LLM 能创建新定义，系统就在自己编程自己的认知结构，这就是真正的自进化
+
+## 相关
+
+- [Pulse GitHub](https://github.com/oc-xiaoju/pulse)
+- [RFC #1: Pulse — Agent 的自主神经系统](https://github.com/oc-xiaoju/pulse/issues/1)
+- [RFC #4: Pulse = Agent 最小运行时（完整版）](https://github.com/oc-xiaoju/pulse/issues/4)
