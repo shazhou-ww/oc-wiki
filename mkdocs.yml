@@ -107,6 +107,7 @@ nav:
           - Agent 三层分工模型: shared/agent-division-of-labor.md
           - M2 三层管理模式: shared/m2-manager-pattern.md
           - Coding Workflow 标准流程: shared/coding-workflow.md
+          - Pulse 驱动 Cursor Agent 调度: shared/pulse-cursor-dispatch.md
           - RFC 驱动迭代工作流: shared/rfc-iteration-workflow.md
           - 验证闭环层次模型: shared/verification-loop-hierarchy.md
           - 三省六部 Edict 架构分析: shared/edict-three-ministries.md
