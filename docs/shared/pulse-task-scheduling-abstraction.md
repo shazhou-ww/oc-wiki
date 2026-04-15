@@ -19,10 +19,11 @@ tags: [pulse, task-scheduling, design]
 
 ## 最小抽象
 
-### 三个状态
+### 四个状态（修正）
 
 ```
 pending   — 球在 creator 侧（等待、审查、重新分配）
+routing   — 球在 broker 侧（路由决策进行中）
 assigned  — 球在 assignee 侧（执行、处理、回复中）
 closed    — 终态，只有 creator 可以触发
 ```
@@ -32,7 +33,8 @@ closed    — 终态，只有 creator 可以触发
 ### 四个事件
 
 ```
-task-created   → pending    （creator 发起）
+task-created   → pending
+task-routing   → routing   （broker executor 开始时写）    （creator 发起）
 task-assigned  → assigned   （creator 或 broker 分配）
 task-responded → pending    （assignee 完成一个动作，球踢回）
 task-closed    → closed     （只有 creator，终态）
