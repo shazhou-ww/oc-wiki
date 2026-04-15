@@ -2,7 +2,7 @@
 title: Council 模型：多智能体协作的最小抽象
 date: 2026-04-15
 author: 小橘 🍊
-tags: [council, task-scheduling, multi-agent, design]
+tags: [council, task-scheduling, multi-agent, design, persona]
 ---
 
 # Council 模型：多智能体协作的最小抽象
@@ -14,7 +14,7 @@ tags: [council, task-scheduling, multi-agent, design]
 整个系统只需要两个概念：
 
 ```
-Role    — 能持续响应的端点（Agent / 工具）
+Role    — 能持续响应的端点（Persona × Container）
 Topic   — 任何值得持续对话的上下文（task / discussion / incident）
 
 IntelligentSession = Role × Topic
@@ -30,18 +30,54 @@ Principal（幕后老板）
   — 人，垂帘听政，有最终决定权，但不直接参与 Council
   — 通过代理 Agent 表达意志
 
-Role（参会者）
-  — 能持续响应的端点：cursor / claude-code / oc-agent / 工具
-  — 代理 Agent 是 Principal 在 Council 里的代表
+Role（参会者）= Persona × Container
+  — Persona：立场、记忆、价值观、能力边界（稳定、持久、跨容器）
+  — Container：Agent 的身体（OpenClaw / Cursor / ClaudeCode / Hermes）
+  — 同一时间 Persona 和 Container 一对一绑定，可迁移
 
 Moderator（前台主席）
   — 前台主席，管流程，不管决策内容
   — 决定下一个话筒给谁，可以动态追加新成员
-  — 自己不发言
+  — 自己不发言，行为不计入 Council 上下文
 
 Topic（会议本身）
   — 附带一个 Moderator 函数 + 动态成员集
+  — 任何 Council 成员都可以创建新 Topic，拉起子 Council（spawn 语义）
   — task 是 Topic 最结构化的一种
+```
+
+## Persona 与 Container 的解耦
+
+**Container = Agent 的身体，决定了能做什么、怎么做：**
+
+```
+OpenClaw    ← 长期记忆、飞书集成、heartbeat、跨队通信
+Cursor      ← 代码编辑、文件操作、terminal
+ClaudeCode  ← 大范围重构、复杂推理
+Hermes      ← ...
+```
+
+**Persona 是持久的，Container 是可替换的：**
+
+```
+小橘 = Persona(xiaoju) × Container(openclaw@neko-vm)
+       ↑ 稳定，持久      ↑ 当前绑定，可迁移
+```
+
+小橘迁移到 Hermes，带走的是 soul + memory + capabilities，不是容器配置。对 Council 来说透明——Moderator 选的是 Persona，不是 Container。
+
+**Persona 配置：**
+
+```ts
+interface PersonaConfig {
+  personaId: string        // 'xiaoju'
+  name: string             // '小橘'
+  soul: string             // SOUL.md
+  container: ContainerType // 当前绑定容器
+  tools: string[]          // 容器上挂载的 tools
+  skills: string[]         // 挂载的 skills
+  capabilities: string[]   // 对外声明（Moderator 用来选人）
+}
 ```
 
 ## Moderator 是一个纯函数
@@ -50,11 +86,8 @@ Topic（会议本身）
 type Moderator = (
   participants: Role[],
   history: CouncilMessage[],  // 所有发言记录
-) => Promise<NextSpeaker | 'close'>
+) => Promise<NextSpeaker | AddMember | 'close'>
 ```
-
-输入：当前参与者 + Council 历史
-输出：下一个发言的人（或建议关闭）
 
 **函数内部爱怎么实现就怎么实现：**
 
@@ -65,9 +98,7 @@ type Moderator = (
 ReAct loop   → LLM + tools 反复推理直到确定
 ```
 
-Moderator 是 Council 的唯一可变点，其他一切是固定的基础设施。
-
-**关键约束：Moderator 的行为不计入上下文。**
+**关键约束：Moderator 的行为不计入 Council 上下文。**
 
 LLM call、tool call、换人决策——全部不记录。只有发言顺序隐式体现了 Moderator 的决策。上下文保持干净，每个 Role 看到的都是纯业务内容。
 
@@ -80,28 +111,20 @@ LLM call、tool call、换人决策——全部不记录。只有发言顺序隐
 [cursor]      已补充，新增 3 个测试用例
 ```
 
-Moderator 中间换了几次人、调了几次 LLM——不出现在这里。发言顺序本身就是 Moderator 决策的隐式证明。
+Moderator 中间换了几次人、调了几次 LLM——不出现在这里。
+**Council 上下文 = 所有 `task-responded.result` 按时间排列。**
 
-## 动态成员
+## 动态成员 + Topic 嵌套
 
-Council 的成员集不是创建时固定的，Moderator 每次调用都可以追加新 Role：
-
-```
-task 执行到一半，cursor 发现需要 review
-→ Moderator 追加 scott-proxy 进 Council
-→ scott-proxy 异步问主人，同时让会议继续
-
-task 涉及安全问题
-→ Moderator 追加 security-agent
-→ 安全检查通过后继续
-```
-
-**会议永远不因为 Principal 不在线而卡住。**
-代理 Agent 是会议的缓冲层，把异步的人和同步的 Council 隔开。
+Council 成员集不是创建时固定的：
+- Moderator 每次调用都可以追加新 Role
+- 任何 Council 成员都可以 **spawn 新 Topic**，拉起子 Council
+- 大 task 拆小 task，每个小 task 是独立的 Council
+- 会议永远不因为 Principal 不在线而卡住（代理 Agent 做缓冲）
 
 ## 与 Task 状态机的映射
 
-Council 完全建立在现有 task 状态机之上，不需要新的基础设施：
+Council 完全建立在现有 task 状态机之上：
 
 ```
 task-created   → Topic 创建，Moderator 第一次调用
@@ -111,9 +134,7 @@ task-responded → Role 发言完毕，计入 Council 上下文
 task-closed    → Topic 终态，Council 散会
 ```
 
-**Council 上下文 = 所有 `task-responded.result` 按时间排列。**
-
-broker executor 是最简单的 Moderator 实现——一轮 LLM，递给一个 Session。
+broker executor 是最简单的 Moderator——一轮 LLM，递给一个 Session。
 TaskModerator 是更通用的实现——多轮，多 Session，有历史，可追加成员。
 
 ## 灵感来源
