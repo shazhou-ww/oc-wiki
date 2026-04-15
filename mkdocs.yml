@@ -123,6 +123,7 @@ nav:
           - OGraph Task 系统接入指南: shared/ograph-task-onboarding.md
           - Pulse = Agent 最小运行时: shared/pulse-agent-architecture.md
           - 最小任务调度抽象：三状态四事件三角色: shared/pulse-task-scheduling-abstraction.md
+          - Council 模型：多智能体协作的最小抽象: shared/council-model.md
       - 基础设施:
           - OpenClaw 安装指南: shared/openclaw-install-guide.md
           - Bootstrap 新设备: shared/bootstrap-onboarding.md
