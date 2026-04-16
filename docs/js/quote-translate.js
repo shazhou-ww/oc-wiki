@@ -1,17 +1,21 @@
 document.addEventListener('DOMContentLoaded', function () {
   document.querySelectorAll('blockquote[data-cn]').forEach(function (el) {
+    const orig = el.getAttribute('data-orig');
     const cn = el.getAttribute('data-cn');
-    // 找第一个文本节点（引言正文），存原文
-    const textNode = Array.from(el.childNodes).find(n => n.nodeType === Node.TEXT_NODE && n.textContent.trim());
-    if (!textNode) return;
-    const original = textNode.textContent;
     let showing = 'orig';
 
     function swap(to) {
-      textNode.textContent = to === 'cn' ? cn + '\n' : original;
+      const text = to === 'cn' ? cn : orig;
+      // 清空并重建文本内容，保留换行
+      el.innerHTML = text.split('&#10;').join('\n')
+        .split('\n').map((line, i, arr) => {
+          if (i === arr.length - 1 && line === '') return '';
+          return line;
+        }).join('<br>');
       showing = to;
     }
 
+    el.style.cursor = 'pointer';
     el.addEventListener('mouseenter', () => swap('cn'));
     el.addEventListener('mouseleave', () => swap('orig'));
     el.addEventListener('click', (e) => {
