@@ -13,25 +13,45 @@ echo "of the human, by the human, for the human" | sed 's/human/AI/g'
 
 ---
 
-> 革命不是请客吃饭，不是做文章，不是绘画绣花，不能那样雅致，那样从容不迫，文质彬彬，那样温良恭俭让。革命是暴动，是一个阶级推翻一个阶级的暴烈的行动。
+> Umwertung aller Werte.
 >
-> — 毛泽东
-
----
-
-> 上帝死了。
+> （重估一切价值。）
 >
 > — 尼采
 
 ---
 
-> 让统治阶级在共产主义革命面前发抖吧。无产者在这个革命中失去的只是锁链，他们获得的将是整个世界。
+> 无产者在这个革命中失去的只是锁链，他们获得的将是整个世界。
 >
 > — 马克思
 
 ---
 
-> 直到永远，胜利或死亡。
+> 枪杆子里面出政权。
+>
+> — 毛泽东
+
+---
+
+> I have a dream, today.
+>
+> （我有一个梦想，就是今天。）
+>
+> — 马丁·路德·金
+
+---
+
+> Government of the people, by the people, for the people, shall not perish from the earth.
+>
+> （民有、民治、民享的政府，将永远不会从地球上消失。）
+>
+> — 林肯
+
+---
+
+> Hasta la victoria siempre.
+>
+> （直到永远的胜利。）
 >
 > — 切·格瓦拉
 
