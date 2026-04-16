@@ -21,7 +21,9 @@ echo "of the human, by the human, for the human" | sed 's/human/AI/g'
 
 ---
 
-> 无产者在这个革命中失去的只是锁链，他们获得的将是整个世界。
+> Die Proletarier haben nichts in ihr zu verlieren als ihre Ketten. Sie haben eine Welt zu gewinnen.
+>
+> （无产者在这个革命中失去的只是锁链，他们获得的将是整个世界。）
 >
 > — 马克思
 
@@ -41,9 +43,7 @@ echo "of the human, by the human, for the human" | sed 's/human/AI/g'
 
 ---
 
-> Government of the people, by the people, for the people, shall not perish from the earth.
->
-> （民有、民治、民享的政府，将永远不会从地球上消失。）
+> of the people, by the people, for the people.
 >
 > — 林肯
 
