@@ -45,7 +45,7 @@ I have a dream, today.
 
 ---
 
-<blockquote>
+<blockquote data-cn="民有、民治、民享。">
 of the people, by the people, for the people.
 
 — 林肯
