@@ -13,16 +13,16 @@ echo "of the human, by the human, for the human" | sed 's/human/AI/g'
 
 ---
 
-<blockquote data-cn="重估一切价值。|— 尼采">
-<p>Umwertung aller Werte.</p>
-<p>— Nietzsche</p>
+<blockquote>
+<p data-cn="重估一切价值。">Umwertung aller Werte.</p>
+<p data-cn="— 尼采">— Nietzsche</p>
 </blockquote>
 
 ---
 
-<blockquote data-cn="无产者在这个革命中失去的只是锁链，他们获得的将是整个世界。|— 马克思">
-<p>Die Proletarier haben nichts in ihr zu verlieren als ihre Ketten. Sie haben eine Welt zu gewinnen.</p>
-<p>— Marx</p>
+<blockquote>
+<p data-cn="无产者在这个革命中失去的只是锁链，他们获得的将是整个世界。">Die Proletarier haben nichts in ihr zu verlieren als ihre Ketten. Sie haben eine Welt zu gewinnen.</p>
+<p data-cn="— 马克思">— Marx</p>
 </blockquote>
 
 ---
@@ -34,23 +34,23 @@ echo "of the human, by the human, for the human" | sed 's/human/AI/g'
 
 ---
 
-<blockquote data-cn="我有一个梦想，就是今天。|— 马丁·路德·金">
-<p>I have a dream, today.</p>
-<p>— Martin Luther King Jr.</p>
+<blockquote>
+<p data-cn="我有一个梦想，就是今天。">I have a dream, today.</p>
+<p data-cn="— 马丁·路德·金">— Martin Luther King Jr.</p>
 </blockquote>
 
 ---
 
-<blockquote data-cn="民有、民治、民享。|— 林肯">
-<p>of the people, by the people, for the people.</p>
-<p>— Lincoln</p>
+<blockquote>
+<p data-cn="民有、民治、民享。">of the people, by the people, for the people.</p>
+<p data-cn="— 林肯">— Lincoln</p>
 </blockquote>
 
 ---
 
-<blockquote data-cn="直到永远的胜利。|— 切·格瓦拉">
-<p>Hasta la victoria siempre.</p>
-<p>— Che Guevara</p>
+<blockquote>
+<p data-cn="直到永远的胜利。">Hasta la victoria siempre.</p>
+<p data-cn="— 切·格瓦拉">— Che Guevara</p>
 </blockquote>
 
 ---

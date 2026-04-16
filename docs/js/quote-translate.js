@@ -1,20 +1,16 @@
 document.addEventListener('DOMContentLoaded', function () {
-  document.querySelectorAll('blockquote[data-cn]').forEach(function (el) {
-    const cn = el.getAttribute('data-cn').split('|');
-    // 收集所有文本节点
-    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
-    const nodes = [];
-    while (walker.nextNode()) nodes.push(walker.currentNode);
-    // 存原文
-    const orig = nodes.map(n => n.textContent);
+  document.querySelectorAll('blockquote').forEach(function (el) {
+    const ps = el.querySelectorAll('p[data-cn]');
+    if (!ps.length) return;
+
+    const originals = Array.from(ps).map(p => p.textContent);
+    const translations = Array.from(ps).map(p => p.getAttribute('data-cn'));
     let showing = 'orig';
 
     function swap(to) {
-      if (to === 'cn') {
-        cn.forEach((text, i) => { if (nodes[i]) nodes[i].textContent = text; });
-      } else {
-        orig.forEach((text, i) => { if (nodes[i]) nodes[i].textContent = text; });
-      }
+      ps.forEach((p, i) => {
+        p.textContent = to === 'cn' ? translations[i] : originals[i];
+      });
       showing = to;
     }
 
