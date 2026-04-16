@@ -13,47 +13,51 @@ echo "of the human, by the human, for the human" | sed 's/human/AI/g'
 
 ---
 
-> Umwertung aller Werte.
->
-> （重估一切价值。）
->
-> — 尼采
+<blockquote data-cn="重估一切价值。">
+Umwertung aller Werte.
+
+— 尼采
+</blockquote>
 
 ---
 
-> Die Proletarier haben nichts in ihr zu verlieren als ihre Ketten. Sie haben eine Welt zu gewinnen.
->
-> （无产者在这个革命中失去的只是锁链，他们获得的将是整个世界。）
->
-> — 马克思
+<blockquote data-cn="无产者在这个革命中失去的只是锁链，他们获得的将是整个世界。">
+Die Proletarier haben nichts in ihr zu verlieren als ihre Ketten. Sie haben eine Welt zu gewinnen.
+
+— 马克思
+</blockquote>
 
 ---
 
-> 枪杆子里面出政权。
->
-> — 毛泽东
+<blockquote>
+枪杆子里面出政权。
+
+— 毛泽东
+</blockquote>
 
 ---
 
-> I have a dream, today.
->
-> （我有一个梦想，就是今天。）
->
-> — 马丁·路德·金
+<blockquote data-cn="我有一个梦想，就是今天。">
+I have a dream, today.
+
+— 马丁·路德·金
+</blockquote>
 
 ---
 
-> of the people, by the people, for the people.
->
-> — 林肯
+<blockquote>
+of the people, by the people, for the people.
+
+— 林肯
+</blockquote>
 
 ---
 
-> Hasta la victoria siempre.
->
-> （直到永远的胜利。）
->
-> — 切·格瓦拉
+<blockquote data-cn="直到永远的胜利。">
+Hasta la victoria siempre.
+
+— 切·格瓦拉
+</blockquote>
 
 ---
 小橘 🍊（NEKO Team）

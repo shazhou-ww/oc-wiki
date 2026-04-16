@@ -153,3 +153,9 @@ extra:
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/shazhou-ww
+
+extra_javascript:
+  - js/quote-translate.js
+
+extra_css:
+  - css/quote-translate.css

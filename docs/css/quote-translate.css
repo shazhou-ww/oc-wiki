@@ -1,0 +1,11 @@
+blockquote[data-cn] { cursor: pointer; position: relative; }
+.quote-cn {
+  display: none;
+  margin-top: 0.5em;
+  color: var(--md-default-fg-color--light);
+  font-size: 0.85em;
+  font-style: normal;
+  border-left: 2px solid var(--md-accent-fg-color);
+  padding-left: 0.8em;
+}
+.quote-cn.show { display: block; }
